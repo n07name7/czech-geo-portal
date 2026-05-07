@@ -5,11 +5,42 @@
     "schools":       "Primary schools",
     "kindergartens": "Kindergartens",
     "playgrounds":   "Playgrounds",
-    "clinics":       "Clinics",
+    "clinics":       "Clinics / doctors",
     "pharmacies":    "Pharmacies",
-    "transport":     "Public transport",
+    "transport":     "Public transport stops",
     "parks":         "Parks",
     "sports":        "Sports facilities",
-    "shops":         "Grocery stores"
+    "shops":         "Grocery shops"
+  },
+  "nav": {
+    "map": "Map",
+    "methodology": "Methodology"
+  },
+  "landing": {
+    "headline": "Where in Czechia?",
+    "subheadline": "Compare Prague neighbourhoods by schools, parks, transport, and more infrastructure layers.",
+    "cta": "Open map",
+    "layersTitle": "What the portal shows",
+    "howTitle": "How it works",
+    "step1Label": "Choose a layer",
+    "step1Desc": "Schools, parks, transport, and more.",
+    "step2Label": "Explore the map",
+    "step2Desc": "The heatmap shows infrastructure density.",
+    "step3Label": "Compare neighbourhoods",
+    "step3Desc": "Find the area with the best accessibility."
+  },
+  "methodology": {
+    "title": "Methodology",
+    "aboutTitle": "About the project",
+    "aboutText": "Czech Geo Portal helps people choose the right place to live. It displays infrastructure density in Prague neighbourhoods using the H3 hexagonal grid. The portal is designed for both Czechs and expats looking for their ideal neighbourhood.",
+    "sourcesTitle": "Data sources",
+    "scoringTitle": "How the score is calculated",
+    "scoringText": "For each hexagonal cell (H3 resolution 10, ~150×150 m) we count the number of objects within an 800 m radius from the cell centre. The result is normalised to a 0–1 scale across the whole city. A score of 1 means the best accessibility in Prague; 0 means no infrastructure within reach."
+  },
+  "basemap": {
+    "svetla": "Light",
+    "tmava": "Dark",
+    "osm": "OSM",
+    "satelit": "Satellite"
   }
 }

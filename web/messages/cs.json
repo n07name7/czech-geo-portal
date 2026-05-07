@@ -11,5 +11,36 @@
     "parks":         "Parky",
     "sports":        "Sportoviště",
     "shops":         "Obchody"
+  },
+  "nav": {
+    "map": "Mapa",
+    "methodology": "Metodologie"
+  },
+  "landing": {
+    "headline": "Kam v Česku?",
+    "subheadline": "Porovnejte čtvrti v Praze podle škol, parků, dopravy a dalších vrstev infrastruktury.",
+    "cta": "Otevřít mapu",
+    "layersTitle": "Co portál zobrazuje",
+    "howTitle": "Jak to funguje?",
+    "step1Label": "Vyber vrstvu",
+    "step1Desc": "Školy, parky, dopravu a další.",
+    "step2Label": "Prozkoumej mapu",
+    "step2Desc": "Teplá mapa ukazuje hustotu infrastruktury.",
+    "step3Label": "Porovnej čtvrtě",
+    "step3Desc": "Najdi район s nejlepší dostupností."
+  },
+  "methodology": {
+    "title": "Metodologie",
+    "aboutTitle": "O projektu",
+    "aboutText": "Czech Geo Portal pomáhá lidem vybrat správné místo k životu. Zobrazuje hustotu infrastruktury v pražských čtvrtích pomocí hexagonální sítě H3. Portál je určen pro Čechy i expaty hledající ideální čtvrť.",
+    "sourcesTitle": "Zdroje dat",
+    "scoringTitle": "Jak se počítá skóre",
+    "scoringText": "Pro každou hexagonální buňku (H3 rozlišení 10, ~150×150 m) počítáme počet objektů v okruhu 800 m od středu buňky. Výsledek normalizujeme na škálu 0–1 v rámci celého města. Skóre 1 znamená nejlepší dostupnost v Praze, 0 znamená žádná infrastruktura v dosahu."
+  },
+  "basemap": {
+    "svetla": "Světlá",
+    "tmava": "Tmavá",
+    "osm": "OSM",
+    "satelit": "Satelit"
   }
 }
