@@ -22,6 +22,8 @@ interface Props {
 export default function MapView({ activeLayer }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const activeLayerRef = useRef(activeLayer);
+  useEffect(() => { activeLayerRef.current = activeLayer; }, [activeLayer]);
 
   useEffect(() => {
     const protocol = new Protocol();
@@ -50,7 +52,7 @@ export default function MapView({ activeLayer }: Props) {
           type: "fill",
           source: layer.id,
           "source-layer": "cells",
-          layout: { visibility: "none" },
+          layout: { visibility: layer.id === activeLayerRef.current ? "visible" : "none" },
           paint: {
             "fill-color": SCORE_GRADIENT as unknown as maplibregl.ExpressionSpecification,
             "fill-opacity": FILL_OPACITY,
