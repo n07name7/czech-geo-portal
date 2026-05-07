@@ -1,5 +1,5 @@
 {
-  "ui": { "layers": "Vrstvy" },
+  "ui": { "city": "Město", "layers": "Vrstvy" },
   "legend": { "low": "méně", "high": "více" },
   "layers": {
     "schools":       "Základní školy",
@@ -40,7 +40,6 @@
   "basemap": {
     "svetla": "Světlá",
     "tmava": "Tmavá",
-    "osm": "OSM",
     "satelit": "Satelit"
   }
 }

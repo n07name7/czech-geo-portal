@@ -61,3 +61,38 @@ h4 {
     filter: drop-shadow(0 0 18px rgba(232, 160, 48, 0.45));
   }
 }
+
+/* Push MapLibre top-right controls below the floating NavBar */
+.maplibregl-ctrl-top-right {
+  margin-top: 56px;
+}
+
+/* Style MapLibre controls to match dark theme */
+.maplibregl-ctrl-group {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.maplibregl-ctrl-group button {
+  background-color: transparent !important;
+  border-bottom: 1px solid var(--border) !important;
+  color: var(--text-muted) !important;
+}
+.maplibregl-ctrl-group button:last-child {
+  border-bottom: none !important;
+}
+.maplibregl-ctrl-group button:hover {
+  background-color: var(--card) !important;
+}
+.maplibregl-ctrl-group button .maplibregl-ctrl-icon {
+  filter: invert(1) brightness(0.6);
+}
+.maplibregl-ctrl-attrib {
+  background: rgba(11, 13, 18, 0.7) !important;
+  color: var(--text-faint) !important;
+  font-size: 10px !important;
+}
+.maplibregl-ctrl-attrib a {
+  color: var(--text-muted) !important;
+}

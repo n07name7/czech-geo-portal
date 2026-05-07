@@ -11,15 +11,15 @@ interface Props {
 export default function BasemapSwitcher({ activeBasemap, onChange }: Props) {
   const t = useTranslations("basemap");
   return (
-    <div className="absolute bottom-24 right-3 z-10 flex flex-col gap-1">
+    <div className="absolute bottom-10 right-4 z-10 flex flex-col border border-[var(--border)]">
       {BASEMAPS.map((bm) => (
         <button
           key={bm.id}
           onClick={() => onChange(bm.id)}
-          className={`px-2.5 py-1 text-xs font-medium rounded-lg shadow transition-colors ${
+          className={`px-3 py-1.5 text-[10px] tracking-widest uppercase font-body font-medium transition-colors border-b border-[var(--border)] last:border-b-0 ${
             activeBasemap === bm.id
-              ? "bg-[var(--accent)] text-white"
-              : "bg-white/95 text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-white"
+              ? "bg-[var(--accent)] text-[#0b0d12]"
+              : "bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--card)]"
           }`}
         >
           {t(bm.id)}

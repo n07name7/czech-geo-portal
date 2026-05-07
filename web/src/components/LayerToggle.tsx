@@ -7,18 +7,17 @@ interface Props {
   onClick: () => void;
 }
 
-export default function LayerToggle({ layer, active, label, onClick }: Props) {
+export default function LayerToggle({ active, label, onClick }: Props) {
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors ${
+      className={`flex items-center gap-3 w-full px-3 py-2 text-left transition-colors ${
         active
-          ? "bg-emerald-100 text-emerald-900 font-medium"
-          : "hover:bg-gray-100 text-gray-700"
+          ? "bg-[var(--accent-glow)] text-[var(--accent)] font-medium border-l-2 border-[var(--accent)]"
+          : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--card)] border-l-2 border-transparent"
       }`}
     >
-      <span className="text-base">{layer.icon}</span>
-      <span>{label}</span>
+      <span className="font-body text-xs leading-snug">{label}</span>
     </button>
   );
 }

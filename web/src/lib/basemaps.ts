@@ -17,19 +17,14 @@ const SATELLITE_STYLE = {
 
 export const BASEMAPS: BasemapConfig[] = [
   {
-    id: "svetla",
-    labelKey: "basemap.svetla",
-    style: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
-  },
-  {
     id: "tmava",
     labelKey: "basemap.tmava",
     style: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
   },
   {
-    id: "osm",
-    labelKey: "basemap.osm",
-    style: "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json",
+    id: "svetla",
+    labelKey: "basemap.svetla",
+    style: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
   },
   {
     id: "satelit",
@@ -38,4 +33,4 @@ export const BASEMAPS: BasemapConfig[] = [
   },
 ];
 
-export const DEFAULT_BASEMAP = BASEMAPS[0];
+export const DEFAULT_BASEMAP = BASEMAPS[0]; // tmava

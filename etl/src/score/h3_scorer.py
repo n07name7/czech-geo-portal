@@ -5,27 +5,17 @@ import numpy as np
 from pyproj import Transformer
 from scipy.spatial import cKDTree
 
-# Mercator scale factor at Prague ~50°N: distances in EPSG:3857 need this correction
-_PRAGUE_LAT_RAD = math.radians(50.07)
-_MERCATOR_SCALE = 1.0 / math.cos(_PRAGUE_LAT_RAD)  # ≈ 1.556
-
-# Prague bounding box as a polygon (simplified rectangle)
-# This covers Prague administrative area (OSM relation 435514)
-PRAGUE_BOUNDARY_LATLNG = [
-    (50.177, 14.224),
-    (50.177, 14.707),
-    (49.941, 14.707),
-    (49.941, 14.224),
-]
-
 _TRANSFORMER = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
 
 RADIUS_M = 800  # ~10 minute walk
 
 
-def get_prague_cells(resolution: int = 10) -> list[str]:
-    """Return all H3 cell IDs covering Prague at given resolution."""
-    boundary = h3.LatLngPoly(PRAGUE_BOUNDARY_LATLNG)
+def get_city_cells(bbox: tuple[float, float, float, float], resolution: int = 10) -> list[str]:
+    """Return all H3 cell IDs covering a city bounding box at given resolution."""
+    south, west, north, east = bbox
+    boundary = h3.LatLngPoly([
+        (north, west), (north, east), (south, east), (south, west),
+    ])
     return list(h3.polygon_to_cells(boundary, resolution))
 
 
@@ -45,6 +35,7 @@ def score_cells(
     """
     For each H3 cell in cell_ids, count POIs within radius_m metres.
     Returns {cell_id: normalized_score} where max score == 1.0.
+    Score is normalised per-city (max within the provided cell_ids == 1.0).
     """
     if not pois or not cell_ids:
         return {c: 0.0 for c in cell_ids}
@@ -54,14 +45,11 @@ def score_cells(
     cell_xy = _to_mercator(centers)
 
     tree = cKDTree(poi_xy)
-    counts = np.array(
-        [len(tree.query_ball_point(xy, radius_m * _MERCATOR_SCALE)) for xy in cell_xy],
-        dtype=float,
-    )
+    counts = tree.query_ball_point(cell_xy, r=radius_m, return_length=True)
+    counts = np.array(counts, dtype=float)
 
     max_count = counts.max()
     if max_count == 0:
         return {c: 0.0 for c in cell_ids}
 
-    normalized = counts / max_count
-    return dict(zip(cell_ids, normalized.tolist()))
+    return dict(zip(cell_ids, (counts / max_count).tolist()))

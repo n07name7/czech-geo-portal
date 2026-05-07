@@ -190,9 +190,9 @@ export default async function LandingPage() {
             </h2>
           </div>
 
-          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-px bg-[var(--border)]">
-            {LAYERS.map((layer) => (
-              <LayerTile key={layer.id} icon={layer.icon} labelKey={layer.labelKey} />
+          <div className="grid grid-cols-1 sm:grid-cols-3 border-t border-l border-[var(--border)]">
+            {LAYERS.map((layer, i) => (
+              <LayerItem key={layer.id} num={i + 1} labelKey={layer.labelKey} />
             ))}
           </div>
         </div>
@@ -272,12 +272,14 @@ function HowTitle() {
   return <>{t("howTitle")}</>;
 }
 
-function LayerTile({ icon, labelKey }: { icon: string; labelKey: string }) {
+function LayerItem({ num, labelKey }: { num: number; labelKey: string }) {
   const t = useTranslations();
   return (
-    <div className="bg-[var(--card)] hover:bg-[var(--surface)] group transition-colors px-5 py-6 flex flex-col items-start gap-3 cursor-default">
-      <span className="text-2xl leading-none">{icon}</span>
-      <span className="font-body text-xs text-[var(--text-muted)] group-hover:text-[var(--text)] leading-snug transition-colors">
+    <div className="border-r border-b border-[var(--border)] px-6 py-5 flex items-center gap-4 group hover:bg-[var(--surface)] transition-colors cursor-default">
+      <span className="font-body text-[9px] tracking-widest text-[var(--accent)] tabular-nums opacity-60 flex-shrink-0 select-none">
+        {String(num).padStart(2, "0")}
+      </span>
+      <span className="font-body text-sm text-[var(--text-muted)] group-hover:text-[var(--text)] leading-snug transition-colors">
         {t(labelKey)}
       </span>
     </div>

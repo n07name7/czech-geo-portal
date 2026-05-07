@@ -1,5 +1,5 @@
 {
-  "ui": { "layers": "Layers" },
+  "ui": { "city": "City", "layers": "Layers" },
   "legend": { "low": "less", "high": "more" },
   "layers": {
     "schools":       "Primary schools",
@@ -40,7 +40,6 @@
   "basemap": {
     "svetla": "Light",
     "tmava": "Dark",
-    "osm": "OSM",
     "satelit": "Satellite"
   }
 }

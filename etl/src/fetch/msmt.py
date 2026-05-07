@@ -1,10 +1,5 @@
 import requests
 
-# Prague bounding box: (south, west, north, east)
-CZECH_BBOX = (49.94, 14.22, 50.18, 14.71)
-
-# Overpass API queries for schools and kindergartens
-# Note: We use OSM Overpass API instead of MŠMT because MŠMT has no coordinates
 OSM_LAYER_MAP = {
     "schools": (
         'node["amenity"="school"]({bbox}); '
@@ -19,32 +14,17 @@ OSM_LAYER_MAP = {
 }
 
 
-def fetch_msmt_pois(layer: str) -> list[tuple[float, float]]:
-    """
-    Return list of (lat, lon) for schools or kindergartens across Czech Republic.
-
-    Uses OpenStreetMap (Overpass API) since MŠMT registry has no coordinates.
-    The MŠMT registry is authoritative but we use OSM for geospatial data.
-
-    Args:
-        layer: "schools" or "kindergartens"
-
-    Returns:
-        List of (lat, lon) tuples
-
-    Raises:
-        ValueError: if layer is not recognized
-    """
+def fetch_msmt_pois(
+    layer: str,
+    bbox: tuple[float, float, float, float] = (49.94, 14.22, 50.18, 14.71),
+) -> list[tuple[float, float]]:
+    """Return list of (lat, lon) for schools or kindergartens within bbox."""
     if layer not in OSM_LAYER_MAP:
-        raise ValueError(
-            f"Unknown layer: {layer!r}. Valid: {list(OSM_LAYER_MAP.keys())}"
-        )
+        raise ValueError(f"Unknown layer: {layer!r}. Valid: {list(OSM_LAYER_MAP)}")
 
-    south, west, north, east = CZECH_BBOX
+    south, west, north, east = bbox
     bbox_str = f"{south},{west},{north},{east}"
     query_body = OSM_LAYER_MAP[layer].format(bbox=bbox_str)
-
-    # Build Overpass query
     query = f"[out:json][timeout:90];\n({query_body}\n);\nout center;"
 
     headers = {"User-Agent": "Czech-Geo-Portal/1.0 (Python ETL)"}
@@ -59,12 +39,9 @@ def fetch_msmt_pois(layer: str) -> list[tuple[float, float]]:
 
     pois: list[tuple[float, float]] = []
     for element in data.get("elements", []):
-        # For nodes: lat/lon are direct
-        # For ways: use center.lat/center.lon
         if "lat" in element and "lon" in element:
             pois.append((float(element["lat"]), float(element["lon"])))
         elif "center" in element:
-            center = element["center"]
-            pois.append((float(center["lat"]), float(center["lon"])))
-
+            c = element["center"]
+            pois.append((float(c["lat"]), float(c["lon"])))
     return pois
