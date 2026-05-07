@@ -1,0 +1,15 @@
+{
+  "ui": { "layers": "Vrstvy" },
+  "legend": { "low": "méně", "high": "více" },
+  "layers": {
+    "schools":       "Základní školy",
+    "kindergartens": "Mateřské školy",
+    "playgrounds":   "Dětská hřiště",
+    "clinics":       "Lékaři / kliniky",
+    "pharmacies":    "Lékárny",
+    "transport":     "Zastávky MHD",
+    "parks":         "Parky",
+    "sports":        "Sportoviště",
+    "shops":         "Obchody"
+  }
+}

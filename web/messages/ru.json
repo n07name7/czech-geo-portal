@@ -1,0 +1,15 @@
+{
+  "ui": { "layers": "Слои" },
+  "legend": { "low": "меньше", "high": "больше" },
+  "layers": {
+    "schools":       "Начальные школы",
+    "kindergartens": "Детские сады",
+    "playgrounds":   "Детские площадки",
+    "clinics":       "Врачи / клиники",
+    "pharmacies":    "Аптеки",
+    "transport":     "Остановки MHD",
+    "parks":         "Парки",
+    "sports":        "Спортплощадки",
+    "shops":         "Продуктовые магазины"
+  }
+}

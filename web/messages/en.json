@@ -1,0 +1,15 @@
+{
+  "ui": { "layers": "Layers" },
+  "legend": { "low": "less", "high": "more" },
+  "layers": {
+    "schools":       "Primary schools",
+    "kindergartens": "Kindergartens",
+    "playgrounds":   "Playgrounds",
+    "clinics":       "Clinics",
+    "pharmacies":    "Pharmacies",
+    "transport":     "Public transport",
+    "parks":         "Parks",
+    "sports":        "Sports facilities",
+    "shops":         "Grocery stores"
+  }
+}
