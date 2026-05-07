@@ -1,20 +1,23 @@
 import "../globals.css";
+import { Inter } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
+const inter = Inter({ subsets: ["latin", "latin-ext"] });
+
 const META: Record<string, { title: string; description: string }> = {
   cs: {
-    title: "Kde žít? Infrastrukturní mapa Česka",
-    description: "Porovnejte čtvrti v Praze podle škol, parků, dopravy a dalších 6 vrstev.",
+    title: "Kam v Česku? | Infrastrukturní mapa",
+    description: "Porovnejte čtvrti v Praze podle škol, parků, dopravy a dalších vrstev.",
   },
   en: {
-    title: "Where to live? Czech infrastructure map",
+    title: "Where in Czechia? | Infrastructure map",
     description: "Compare Prague neighbourhoods by schools, parks, transport, and 6 more layers.",
   },
   ru: {
-    title: "Где жить? Карта инфраструктуры Чехии",
+    title: "Куда в Чехии? | Карта инфраструктуры",
     description: "Сравнивайте районы Праги по школам, паркам, транспорту и 6 другим слоям.",
   },
 };
@@ -47,7 +50,7 @@ export default async function LocaleLayout({
 }) {
   const messages = await getMessages();
   return (
-    <html lang={locale}>
+    <html lang={locale} className={inter.className}>
       <body>
         <NextIntlClientProvider messages={messages}>
           {children}
