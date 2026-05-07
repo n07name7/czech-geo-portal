@@ -31,24 +31,31 @@ LAYERS: list[dict] = [
 ]
 
 
-def upload_to_r2(local_path: Path, r2_key: str) -> None:
-    import boto3
-    from botocore.config import Config
-    s3 = boto3.client(
-        "s3",
-        endpoint_url=os.environ["R2_ENDPOINT_URL"],
-        aws_access_key_id=os.environ["R2_ACCESS_KEY_ID"],
-        aws_secret_access_key=os.environ["R2_SECRET_ACCESS_KEY"],
-        config=Config(signature_version="s3v4"),
-    )
-    bucket = os.environ["R2_BUCKET_NAME"]
-    s3.upload_file(
-        str(local_path),
-        bucket,
-        r2_key,
-        ExtraArgs={"ContentType": "application/octet-stream"},
-    )
-    print(f"  uploaded -> r2://{bucket}/{r2_key}")
+def upload_to_github_release(files: list[Path], tag: str = "data-latest") -> None:
+    import requests as req
+    token = os.environ["GITHUB_TOKEN"]
+    repo = os.environ.get("GITHUB_REPOSITORY", "n07name7/czech-geo-portal")
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"}
+    api = "https://api.github.com"
+
+    r = req.get(f"{api}/repos/{repo}/releases/tags/{tag}", headers=headers)
+    if r.status_code == 200:
+        release_id = r.json()["id"]
+        req.delete(f"{api}/repos/{repo}/releases/{release_id}", headers=headers)
+    req.delete(f"{api}/repos/{repo}/git/refs/tags/{tag}", headers=headers)
+
+    r = req.post(f"{api}/repos/{repo}/releases", headers=headers, json={
+        "tag_name": tag, "name": "PMTiles data (auto-updated)", "prerelease": True,
+    })
+    r.raise_for_status()
+    upload_url = r.json()["upload_url"].split("{")[0]
+
+    for path in files:
+        print(f"  uploading {path.name}...")
+        with open(path, "rb") as f:
+            r = req.post(f"{upload_url}?name={path.name}", headers={**headers, "Content-Type": "application/octet-stream"}, data=f)
+            r.raise_for_status()
+        print(f"  uploaded -> github:{tag}/{path.name}")
 
 
 def main(dry_run: bool = False) -> None:
@@ -74,11 +81,11 @@ def main(dry_run: bool = False) -> None:
         build_pmtiles(scores, out)
         print(f"  {out} ({out.stat().st_size // 1024}KB)")
 
-        if not dry_run:
-            print(f"[{name}] uploading to R2...")
-            upload_to_r2(out, f"prague/{name}.pmtiles")
-
     print("\nAll layers done.")
+    if not dry_run:
+        print("\nUploading to GitHub Releases...")
+        files = [OUTPUT_DIR / f"{layer['name']}.pmtiles" for layer in LAYERS if (OUTPUT_DIR / f"{layer['name']}.pmtiles").exists()]
+        upload_to_github_release(files)
 
 
 if __name__ == "__main__":

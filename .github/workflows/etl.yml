@@ -6,6 +6,9 @@ on:
     - cron: "0 3 * * 1"   # every Monday at 03:00 UTC
   workflow_dispatch:        # allow manual trigger
 
+permissions:
+  contents: write
+
 jobs:
   etl:
     runs-on: ubuntu-latest
@@ -31,8 +34,6 @@ jobs:
       - name: Run ETL
         working-directory: etl
         env:
-          R2_ENDPOINT_URL: ${{ secrets.R2_ENDPOINT_URL }}
-          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: python main.py
