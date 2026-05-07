@@ -52,7 +52,7 @@ export default function MapView({ activeLayer }: Props) {
           "source-layer": "cells",
           layout: { visibility: "none" },
           paint: {
-            "fill-color": SCORE_GRADIENT as maplibregl.ExpressionSpecification,
+            "fill-color": SCORE_GRADIENT as unknown as maplibregl.ExpressionSpecification,
             "fill-opacity": FILL_OPACITY,
           },
         });
