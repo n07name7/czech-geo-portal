@@ -3,6 +3,7 @@ import dynamic from "next/dynamic";
 import { useState } from "react";
 import type { LayerId } from "@/types";
 import { LAYERS } from "@/lib/layers";
+import { MAP_STYLE_URL } from "@/lib/map-config";
 import LayerPanel from "@/components/LayerPanel";
 import Legend from "@/components/Legend";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
@@ -19,7 +20,7 @@ export default function HomePage() {
 
   return (
     <main className="relative w-screen h-screen overflow-hidden">
-      <MapView activeLayer={activeLayer} />
+      <MapView activeLayer={activeLayer} basemap={MAP_STYLE_URL} />
       <LayerPanel
         layers={LAYERS}
         activeLayer={activeLayer}

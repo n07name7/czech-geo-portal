@@ -8,7 +8,6 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import type { LayerId } from "@/types";
 import { LAYERS } from "@/lib/layers";
 import {
-  MAP_STYLE_URL,
   PRAGUE_CENTER,
   PRAGUE_INITIAL_ZOOM,
   SCORE_GRADIENT,
@@ -17,12 +16,40 @@ import {
 
 interface Props {
   activeLayer: LayerId;
+  basemap: string | object;
 }
 
-export default function MapView({ activeLayer }: Props) {
+function attachPmtilesLayers(map: maplibregl.Map, activeLayer: LayerId) {
+  for (const layer of LAYERS) {
+    if (!layer.pmtilesUrl) continue;
+    if (!map.getSource(layer.id)) {
+      map.addSource(layer.id, {
+        type: "vector",
+        url: `pmtiles://${layer.pmtilesUrl}`,
+      });
+    }
+    if (!map.getLayer(`${layer.id}-fill`)) {
+      map.addLayer({
+        id: `${layer.id}-fill`,
+        type: "fill",
+        source: layer.id,
+        "source-layer": "cells",
+        layout: { visibility: layer.id === activeLayer ? "visible" : "none" },
+        paint: {
+          "fill-color": SCORE_GRADIENT as unknown as maplibregl.ExpressionSpecification,
+          "fill-opacity": FILL_OPACITY,
+        },
+      });
+    }
+  }
+}
+
+export default function MapView({ activeLayer, basemap }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const activeLayerRef = useRef(activeLayer);
+  const basemapRef = useRef(basemap);
+
   useEffect(() => { activeLayerRef.current = activeLayer; }, [activeLayer]);
 
   useEffect(() => {
@@ -35,32 +62,16 @@ export default function MapView({ activeLayer }: Props) {
     if (!containerRef.current || mapRef.current) return;
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: MAP_STYLE_URL,
+      style: basemapRef.current as string,
       center: PRAGUE_CENTER,
       zoom: PRAGUE_INITIAL_ZOOM,
     });
+    map.addControl(new maplibregl.NavigationControl(), "bottom-right");
     mapRef.current = map;
 
     map.on("error", () => {});
     map.on("load", () => {
-      for (const layer of LAYERS) {
-        if (!layer.pmtilesUrl) continue;
-        map.addSource(layer.id, {
-          type: "vector",
-          url: `pmtiles://${layer.pmtilesUrl}`,
-        });
-        map.addLayer({
-          id: `${layer.id}-fill`,
-          type: "fill",
-          source: layer.id,
-          "source-layer": "cells",
-          layout: { visibility: layer.id === activeLayerRef.current ? "visible" : "none" },
-          paint: {
-            "fill-color": SCORE_GRADIENT as unknown as maplibregl.ExpressionSpecification,
-            "fill-opacity": FILL_OPACITY,
-          },
-        });
-      }
+      attachPmtilesLayers(map, activeLayerRef.current);
     });
 
     return () => {
@@ -68,6 +79,16 @@ export default function MapView({ activeLayer }: Props) {
       mapRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || basemap === basemapRef.current) return;
+    basemapRef.current = basemap;
+    map.setStyle(basemap as string);
+    map.once("style.load", () => {
+      attachPmtilesLayers(map, activeLayerRef.current);
+    });
+  }, [basemap]);
 
   useEffect(() => {
     const map = mapRef.current;
