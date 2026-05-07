@@ -44,7 +44,7 @@ export default function MapView({ activeLayer }: Props) {
     map.on("error", () => {});
     map.on("load", () => {
       for (const layer of LAYERS) {
-        if (!layer.pmtilesUrl.startsWith("http")) continue;
+        if (!layer.pmtilesUrl) continue;
         map.addSource(layer.id, {
           type: "vector",
           url: `pmtiles://${layer.pmtilesUrl}`,
