@@ -5,7 +5,7 @@ import { useTranslations, useLocale } from "next-intl";
 import LanguageSwitcher from "./LanguageSwitcher";
 
 interface Props {
-  floating?: boolean; // true = transparent + backdrop-blur (map page)
+  floating?: boolean;
 }
 
 export default function NavBar({ floating = false }: Props) {
@@ -15,32 +15,29 @@ export default function NavBar({ floating = false }: Props) {
 
   const isActive = (href: string) => pathname === href;
 
-  const navClass = floating
-    ? "absolute top-0 left-0 right-0 z-20 bg-white/80 backdrop-blur-sm border-b border-white/20"
-    : "bg-white border-b border-[var(--border)]";
+  const bgClass = floating
+    ? "absolute top-0 inset-x-0 z-20 bg-[#0b0d12]/75 backdrop-blur-md border-b border-white/5"
+    : "bg-[var(--bg)] border-b border-[var(--border)]";
 
-  const linkClass = (href: string) =>
-    `px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+  const linkCls = (href: string) =>
+    `text-xs tracking-widest uppercase font-medium transition-colors ${
       isActive(href)
-        ? "bg-[var(--accent)] text-white"
-        : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface)]"
+        ? "text-[var(--accent)]"
+        : "text-[var(--text-muted)] hover:text-[var(--text)]"
     }`;
 
   return (
-    <nav className={`${navClass} h-12 flex items-center px-4 gap-4`}>
+    <nav className={`${bgClass} h-12 flex items-center px-6 gap-8`}>
       <Link
         href={`/${locale}`}
-        className="font-bold text-[var(--text)] text-sm tracking-tight mr-auto"
+        className="font-display text-[var(--text)] text-sm tracking-widest uppercase mr-auto"
       >
-        🗺 Kam v Česku?
+        Kam v Česku?
       </Link>
-      <Link href={`/${locale}/map`} className={linkClass(`/${locale}/map`)}>
+      <Link href={`/${locale}/map`} className={linkCls(`/${locale}/map`)}>
         {t("map")}
       </Link>
-      <Link
-        href={`/${locale}/methodology`}
-        className={linkClass(`/${locale}/methodology`)}
-      >
+      <Link href={`/${locale}/methodology`} className={linkCls(`/${locale}/methodology`)}>
         {t("methodology")}
       </Link>
       <LanguageSwitcher />

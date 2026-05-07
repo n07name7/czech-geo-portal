@@ -2,22 +2,29 @@ import { useTranslations } from "next-intl";
 import NavBar from "@/components/NavBar";
 
 const DATA_SOURCES = [
-  { layer: "Základní školy / Primary schools / Начальные школы", source: "OSM Overpass", freq: "Týdně / Weekly" },
-  { layer: "Mateřské školy / Kindergartens / Детские сады", source: "OSM Overpass", freq: "Týdně / Weekly" },
-  { layer: "Dětská hřiště / Playgrounds / Площадки", source: "OSM Overpass", freq: "Týdně / Weekly" },
-  { layer: "Lékaři / Clinics / Клиники", source: "OSM Overpass", freq: "Týdně / Weekly" },
-  { layer: "Lékárny / Pharmacies / Аптеки", source: "OSM Overpass", freq: "Týdně / Weekly" },
-  { layer: "Zastávky MHD / Transport / Транспорт", source: "OSM Overpass", freq: "Týdně / Weekly" },
-  { layer: "Parky / Parks / Парки", source: "OSM Overpass", freq: "Týdně / Weekly" },
-  { layer: "Sportoviště / Sports / Спорт", source: "OSM Overpass", freq: "Týdně / Weekly" },
-  { layer: "Obchody / Shops / Магазины", source: "OSM Overpass", freq: "Týdně / Weekly" },
+  { layer: "Základní školy", source: "OSM Overpass", freq: "Týdně" },
+  { layer: "Mateřské školy", source: "OSM Overpass", freq: "Týdně" },
+  { layer: "Dětská hřiště", source: "OSM Overpass", freq: "Týdně" },
+  { layer: "Lékaři / kliniky", source: "OSM Overpass", freq: "Týdně" },
+  { layer: "Lékárny", source: "OSM Overpass", freq: "Týdně" },
+  { layer: "Zastávky MHD", source: "OSM Overpass", freq: "Týdně" },
+  { layer: "Parky", source: "OSM Overpass", freq: "Týdně" },
+  { layer: "Sportoviště", source: "OSM Overpass", freq: "Týdně" },
+  { layer: "Obchody s potravinami", source: "OSM Overpass", freq: "Týdně" },
+];
+
+const SCORING_STEPS = [
+  "POI v okruhu 800 m",
+  "Počet objektů",
+  "Normalizace 0–1",
+  "Barva na mapě",
 ];
 
 export default function MethodologyPage() {
   return (
     <div className="min-h-screen bg-[var(--bg)]">
       <NavBar />
-      <main className="max-w-3xl mx-auto px-6 py-12 space-y-12">
+      <main className="max-w-3xl mx-auto px-8 sm:px-14 py-16 space-y-16">
         <PageTitle />
         <AboutSection />
         <SourcesSection />
@@ -30,8 +37,11 @@ export default function MethodologyPage() {
 function PageTitle() {
   const t = useTranslations("methodology");
   return (
-    <div className="border-b border-[var(--border)] pb-6">
-      <h1 className="text-3xl font-bold text-[var(--text)]">{t("title")}</h1>
+    <div className="border-b border-[var(--border)] pb-8">
+      <span className="text-[10px] tracking-[0.25em] uppercase text-[var(--accent)] font-body block mb-4">
+        Dokumentace
+      </span>
+      <h1 className="font-display text-5xl text-[var(--text)]">{t("title")}</h1>
     </div>
   );
 }
@@ -39,9 +49,9 @@ function PageTitle() {
 function AboutSection() {
   const t = useTranslations("methodology");
   return (
-    <section className="space-y-3">
-      <h2 className="text-xl font-semibold text-[var(--text)]">{t("aboutTitle")}</h2>
-      <p className="text-[var(--text-muted)] leading-relaxed">{t("aboutText")}</p>
+    <section className="space-y-4">
+      <h2 className="font-display text-2xl text-[var(--text)]">{t("aboutTitle")}</h2>
+      <p className="font-body text-[var(--text-muted)] leading-relaxed">{t("aboutText")}</p>
     </section>
   );
 }
@@ -49,15 +59,21 @@ function AboutSection() {
 function SourcesSection() {
   const t = useTranslations("methodology");
   return (
-    <section className="space-y-4">
-      <h2 className="text-xl font-semibold text-[var(--text)]">{t("sourcesTitle")}</h2>
-      <div className="overflow-hidden rounded-xl border border-[var(--border)]">
-        <table className="w-full text-sm">
+    <section className="space-y-6">
+      <h2 className="font-display text-2xl text-[var(--text)]">{t("sourcesTitle")}</h2>
+      <div className="border border-[var(--border)]">
+        <table className="w-full text-sm font-body">
           <thead>
-            <tr className="bg-[var(--surface)] border-b border-[var(--border)]">
-              <th className="text-left px-4 py-3 font-semibold text-[var(--text)]">Vrstva / Layer</th>
-              <th className="text-left px-4 py-3 font-semibold text-[var(--text)]">Zdroj / Source</th>
-              <th className="text-left px-4 py-3 font-semibold text-[var(--text)]">Aktualizace</th>
+            <tr className="border-b border-[var(--border)]">
+              <th className="text-left px-5 py-3 text-[10px] tracking-[0.2em] uppercase text-[var(--text-muted)] font-medium">
+                Vrstva
+              </th>
+              <th className="text-left px-5 py-3 text-[10px] tracking-[0.2em] uppercase text-[var(--text-muted)] font-medium">
+                Zdroj
+              </th>
+              <th className="text-left px-5 py-3 text-[10px] tracking-[0.2em] uppercase text-[var(--text-muted)] font-medium">
+                Aktualizace
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -65,12 +81,12 @@ function SourcesSection() {
               <tr
                 key={i}
                 className={`border-b border-[var(--border)] last:border-0 ${
-                  i % 2 === 0 ? "bg-white" : "bg-[var(--surface)]"
+                  i % 2 === 0 ? "bg-[var(--card)]" : "bg-[var(--surface)]"
                 }`}
               >
-                <td className="px-4 py-3 text-[var(--text)]">{row.layer}</td>
-                <td className="px-4 py-3 text-[var(--text-muted)]">{row.source}</td>
-                <td className="px-4 py-3 text-[var(--text-muted)]">{row.freq}</td>
+                <td className="px-5 py-3 text-[var(--text)]">{row.layer}</td>
+                <td className="px-5 py-3 text-[var(--text-muted)]">{row.source}</td>
+                <td className="px-5 py-3 text-[var(--text-muted)]">{row.freq}</td>
               </tr>
             ))}
           </tbody>
@@ -83,25 +99,32 @@ function SourcesSection() {
 function ScoringSection() {
   const t = useTranslations("methodology");
   return (
-    <section className="space-y-4">
-      <h2 className="text-xl font-semibold text-[var(--text)]">{t("scoringTitle")}</h2>
-      <div className="flex items-center gap-2 flex-wrap text-sm font-medium">
-        {["POI v okruhu 800m", "→", "Počet", "→", "Normalizace 0–1", "→", "Barva na mapě"].map(
-          (step, i) => (
-            <span
-              key={i}
-              className={
-                step === "→"
-                  ? "text-[var(--text-muted)]"
-                  : "bg-blue-50 text-[var(--accent)] px-3 py-1.5 rounded-lg"
-              }
-            >
+    <section className="space-y-6">
+      <h2 className="font-display text-2xl text-[var(--text)]">{t("scoringTitle")}</h2>
+
+      {/* Step pipeline */}
+      <div className="flex items-stretch gap-0 overflow-x-auto">
+        {SCORING_STEPS.map((step, i) => (
+          <div key={i} className="flex items-center">
+            <div className="border border-[var(--border)] bg-[var(--card)] px-4 py-3 text-xs font-body text-[var(--text-muted)] whitespace-nowrap">
+              <span className="text-[var(--accent)] font-medium mr-2">{String(i + 1).padStart(2, "0")}</span>
               {step}
-            </span>
-          )
-        )}
+            </div>
+            {i < SCORING_STEPS.length - 1 && (
+              <span className="text-[var(--text-faint)] px-1 text-xs flex-shrink-0">→</span>
+            )}
+          </div>
+        ))}
       </div>
-      <p className="text-[var(--text-muted)] leading-relaxed">{t("scoringText")}</p>
+
+      <p className="font-body text-[var(--text-muted)] leading-relaxed">{t("scoringText")}</p>
+
+      {/* Technical note */}
+      <div className="border-l-2 border-[var(--accent)] border-opacity-40 pl-4">
+        <p className="font-body text-xs text-[var(--text-faint)] leading-relaxed">
+          H3 rozlišení 10 · každá buňka ≈ 150 × 150 m · okruh 800 m od středu buňky
+        </p>
+      </div>
     </section>
   );
 }

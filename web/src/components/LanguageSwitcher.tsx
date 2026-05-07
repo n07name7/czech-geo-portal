@@ -20,19 +20,21 @@ export default function LanguageSwitcher() {
   };
 
   return (
-    <div className="flex gap-1 bg-white/95 rounded-lg p-1">
-      {LOCALES.map((l) => (
-        <button
-          key={l.code}
-          onClick={() => switchLocale(l.code)}
-          className={`px-2 py-1 text-xs rounded font-medium transition-colors ${
-            locale === l.code
-              ? "bg-emerald-600 text-white"
-              : "text-gray-600 hover:bg-gray-100"
-          }`}
-        >
-          {l.label}
-        </button>
+    <div className="flex gap-3 items-center">
+      {LOCALES.map((l, i) => (
+        <span key={l.code} className="flex items-center gap-3">
+          {i > 0 && <span className="text-[var(--text-faint)] text-xs">·</span>}
+          <button
+            onClick={() => switchLocale(l.code)}
+            className={`text-xs tracking-widest font-medium transition-colors ${
+              locale === l.code
+                ? "text-[var(--accent)]"
+                : "text-[var(--text-muted)] hover:text-[var(--text)]"
+            }`}
+          >
+            {l.label}
+          </button>
+        </span>
       ))}
     </div>
   );
