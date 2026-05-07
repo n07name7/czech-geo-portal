@@ -20,7 +20,7 @@ export default function LanguageSwitcher() {
   };
 
   return (
-    <div className="absolute top-4 right-4 flex gap-1 bg-white/95 rounded-lg shadow p-1 z-10">
+    <div className="flex gap-1 bg-white/95 rounded-lg p-1">
       {LOCALES.map((l) => (
         <button
           key={l.code}
