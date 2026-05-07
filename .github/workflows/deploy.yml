@@ -19,10 +19,8 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - run: npm ci
         working-directory: web
-      - run: npm run build
-        working-directory: web
-        env:
-          NEXT_PUBLIC_R2_BASE_URL: ${{ secrets.NEXT_PUBLIC_R2_BASE_URL }}
+      # Note: NEXT_PUBLIC_R2_BASE_URL must be set in Vercel project env vars,
+      # not here — the Vercel action rebuilds on Vercel's infrastructure.
       - uses: amondnet/vercel-action@v25
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
