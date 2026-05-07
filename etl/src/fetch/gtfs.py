@@ -6,8 +6,8 @@ import pandas as pd
 
 PID_GTFS_URL = "https://pid.cz/wp-content/uploads/2023/01/PID_GTFS.zip"
 
-# Czech Republic bbox: (south, west, north, east)
-CZECH_BBOX = (48.55, 12.09, 51.06, 18.87)
+# Prague bbox: (south, west, north, east)
+CZECH_BBOX = (49.94, 14.22, 50.18, 14.71)
 
 
 def fetch_gtfs_stops(url: str = PID_GTFS_URL) -> list[tuple[float, float]]:

@@ -1,7 +1,7 @@
 import requests
 
-# Czech Republic bounding box: (south, west, north, east)
-CZECH_BBOX = (48.55, 12.09, 51.06, 18.87)
+# Prague bounding box: (south, west, north, east)
+CZECH_BBOX = (49.94, 14.22, 50.18, 14.71)
 
 # Overpass API queries for schools and kindergartens
 # Note: We use OSM Overpass API instead of MŠMT because MŠMT has no coordinates

@@ -1,8 +1,8 @@
 """NRPZS fetcher for clinics and pharmacies using OSM Overpass as fallback."""
 import requests
 
-# Czech Republic bbox: (south, west, north, east)
-CZECH_BBOX = (48.55, 12.09, 51.06, 18.87)
+# Prague bbox: (south, west, north, east)
+CZECH_BBOX = (49.94, 14.22, 50.18, 14.71)
 
 LAYER_QUERIES: dict[str, str] = {
     "clinics": (
