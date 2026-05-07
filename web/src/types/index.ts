@@ -21,3 +21,11 @@ export interface CellInfo {
   score: number;
   layerScores: Partial<Record<LayerId, number>>;
 }
+
+export type BasemapId = "svetla" | "tmava" | "osm" | "satelit";
+
+export interface BasemapConfig {
+  id: BasemapId;
+  labelKey: string;
+  style: string | object;
+}
