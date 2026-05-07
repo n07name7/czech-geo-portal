@@ -37,4 +37,7 @@ def fetch_osm_pois(
     for element in data.get("elements", []):
         if "lat" in element and "lon" in element:
             pois.append((float(element["lat"]), float(element["lon"])))
+        elif "center" in element:
+            center = element["center"]
+            pois.append((float(center["lat"]), float(center["lon"])))
     return pois
