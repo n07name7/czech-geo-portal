@@ -1,7 +1,13 @@
+import math
+
 import h3
 import numpy as np
 from pyproj import Transformer
 from scipy.spatial import cKDTree
+
+# Mercator scale factor at Prague ~50°N: distances in EPSG:3857 need this correction
+_PRAGUE_LAT_RAD = math.radians(50.07)
+_MERCATOR_SCALE = 1.0 / math.cos(_PRAGUE_LAT_RAD)  # ≈ 1.556
 
 # Prague bounding box as a polygon (simplified rectangle)
 # This covers Prague administrative area (OSM relation 435514)
@@ -49,7 +55,7 @@ def score_cells(
 
     tree = cKDTree(poi_xy)
     counts = np.array(
-        [len(tree.query_ball_point(xy, radius_m)) for xy in cell_xy],
+        [len(tree.query_ball_point(xy, radius_m * _MERCATOR_SCALE)) for xy in cell_xy],
         dtype=float,
     )
 
