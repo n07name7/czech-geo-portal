@@ -16,6 +16,7 @@ const MapView = dynamic(() => import("@/components/MapView"), {
 
 export default function HomePage() {
   const [activeLayer, setActiveLayer] = useState<LayerId>("schools");
+  const [layerPanelCollapsed, setLayerPanelCollapsed] = useState(false);
   const t = useTranslations();
 
   return (
@@ -25,6 +26,8 @@ export default function HomePage() {
         layers={LAYERS}
         activeLayer={activeLayer}
         onLayerChange={setActiveLayer}
+        collapsed={layerPanelCollapsed}
+        onToggle={() => setLayerPanelCollapsed(!layerPanelCollapsed)}
       />
       <Legend labelLow={t("legend.low")} labelHigh={t("legend.high")} />
       <LanguageSwitcher />
