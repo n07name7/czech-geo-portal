@@ -77,7 +77,7 @@ function buildHeatmapPoints(
 
   for (const f of raw) {
     if (f.geometry?.type !== "Polygon") continue;
-    const id = String(f.properties?.h3index ?? `${f.id}`);
+    const id = String(f.properties?.cell ?? `${f.id}`);
     if (seen.has(id)) continue;
     seen.add(id);
 
@@ -194,7 +194,7 @@ function attachPmtilesLayers(
         source: layer.id,
         "source-layer": "cells",
         layout: { visibility: layer.id === activeLayer ? "visible" : "none" },
-        filter: ["==", ["get", "h3index"], ""],
+        filter: ["==", ["get", "cell"], ""],
         paint: {
           "line-color": "#ffffff",
           "line-width": 2,
@@ -329,9 +329,19 @@ export default function MapView({ activeLayer, basemap, activeCity, basemapId }:
     const apply = (data: BoundaryGeoJson) => {
       boundaryRef.current = data;
       const map = mapRef.current;
-      if (map && map.isStyleLoaded()) {
+      if (!map) return;
+      // setData on existing sources is safe even while tiles are still loading
+      // (isStyleLoaded() is false then — e.g. satellite raster streaming in);
+      // only addSource throws before the style finishes. Retry once on idle.
+      try {
         refreshBoundary(map, data);
         clearHeatmapData(map);
+      } catch {
+        map.once("idle", () => {
+          if (boundaryRef.current !== data) return; // city changed again meanwhile
+          refreshBoundary(map, data);
+          clearHeatmapData(map);
+        });
       }
     };
     const cached = boundaryCache.current[activeCity.id];
@@ -394,7 +404,7 @@ export default function MapView({ activeLayer, basemap, activeCity, basemapId }:
     const clearHover = () => {
       if (hoveredHexRef.current) {
         const hlId = `${hoveredHexRef.current.source}-highlight`;
-        if (map.getLayer(hlId)) map.setFilter(hlId, ["==", ["get", "h3index"], ""]);
+        if (map.getLayer(hlId)) map.setFilter(hlId, ["==", ["get", "cell"], ""]);
         hoveredHexRef.current = null;
       }
       popup.remove();
@@ -425,17 +435,17 @@ export default function MapView({ activeLayer, basemap, activeCity, basemapId }:
       const score = best.properties?.score ?? 0;
       if (score <= 0) return false; // no popup for cells with zero accessibility
 
-      const h3index = best.properties?.h3index ?? String(best.id);
+      const h3index = best.properties?.cell ?? String(best.id);
       if (!h3index) return false;
 
       if (String(hoveredHexRef.current?.id) !== String(h3index)) {
         if (hoveredHexRef.current) {
           const prevHl = `${hoveredHexRef.current.source}-highlight`;
-          if (map.getLayer(prevHl)) map.setFilter(prevHl, ["==", ["get", "h3index"], ""]);
+          if (map.getLayer(prevHl)) map.setFilter(prevHl, ["==", ["get", "cell"], ""]);
         }
         hoveredHexRef.current = { id: String(h3index), source: sourceId };
         const hlId = `${sourceId}-highlight`;
-        if (map.getLayer(hlId)) map.setFilter(hlId, ["==", ["get", "h3index"], h3index]);
+        if (map.getLayer(hlId)) map.setFilter(hlId, ["==", ["get", "cell"], h3index]);
       }
       map.getCanvas().style.cursor = "pointer";
       popup.setLngLat(lngLat).setHTML(popupHtml(score)).addTo(map);
