@@ -2,7 +2,11 @@ import "../globals.css";
 import { DM_Serif_Display, Outfit } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+
+export const viewport: Viewport = {
+  viewportFit: "cover",
+};
 import type { ReactNode } from "react";
 
 const dmSerif = DM_Serif_Display({

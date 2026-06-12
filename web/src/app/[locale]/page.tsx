@@ -160,11 +160,11 @@ export default async function LandingPage() {
             </Link>
           </div>
 
-          <div className="flex gap-6 text-[11px] tracking-wider text-[var(--text-faint)] font-body uppercase">
+          <div className="flex flex-wrap gap-x-4 gap-y-2 text-[11px] tracking-wider text-[var(--text-faint)] font-body uppercase">
             <span>9 vrstev dat</span>
-            <span className="text-[var(--border)]">·</span>
+            <span className="text-[var(--border)] hidden sm:inline">·</span>
             <span>H3 rozlišení 10</span>
-            <span className="text-[var(--border)]">·</span>
+            <span className="text-[var(--border)] hidden sm:inline">·</span>
             <span>OSM zdroj</span>
           </div>
         </div>

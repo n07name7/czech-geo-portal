@@ -5,25 +5,162 @@ import maplibregl from "maplibre-gl";
 import { Protocol } from "pmtiles";
 import "maplibre-gl/dist/maplibre-gl.css";
 
-import type { LayerId } from "@/types";
+import type { LayerId, BasemapId } from "@/types";
 import { LAYERS } from "@/lib/layers";
-import type { CityConfig } from "@/lib/cities";
+import { CITIES, type CityConfig } from "@/lib/cities";
 import {
   PRAGUE_CENTER,
   PRAGUE_INITIAL_ZOOM,
   SCORE_GRADIENT,
+  SCORE_GRADIENT_LIGHT,
+  SCORE_GRADIENT_SATELLITE,
   FILL_OPACITY,
+  FILL_OPACITY_LIGHT,
+  FILL_OPACITY_SATELLITE,
+  getHeatmapColor,
 } from "@/lib/map-config";
 
 interface Props {
   activeLayer: LayerId;
   basemap: string | object;
   activeCity: CityConfig;
+  basemapId: BasemapId;
 }
 
-// ── H3 hexagon layers ────────────────────────────────────────────────────────
+// Zoom thresholds for heatmap ↔ hex transition
+const ZOOM_HEX_START   = 10;   // hexes start fading in
+const ZOOM_HEX_FULL    = 11;   // hexes fully opaque
+const ZOOM_HEAT_FADE   = 10;   // heatmap starts fading out
+const ZOOM_HEAT_GONE   = 11;   // heatmap fully transparent
 
-function attachPmtilesLayers(map: maplibregl.Map, activeLayer: LayerId) {
+function getGradientConfig(basemapId: BasemapId) {
+  if (basemapId === "svetla")  return { gradient: SCORE_GRADIENT_LIGHT,    opacity: FILL_OPACITY_LIGHT };
+  if (basemapId === "satelit") return { gradient: SCORE_GRADIENT_SATELLITE, opacity: FILL_OPACITY_SATELLITE };
+  return                              { gradient: SCORE_GRADIENT,           opacity: FILL_OPACITY };
+}
+
+// ── Winding order helpers (RFC 7946) ─────────────────────────────────────────
+function signedArea(ring: number[][]): number {
+  let a = 0;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    a += (ring[j][0] + ring[i][0]) * (ring[j][1] - ring[i][1]);
+  }
+  return a / 2;
+}
+const ensureCCW = (r: number[][]): number[][] => signedArea(r) > 0 ? [...r].reverse() : r;
+const ensureCW  = (r: number[][]): number[][] => signedArea(r) < 0 ? [...r].reverse() : r;
+
+const WORLD_RING: number[][] = ensureCCW([
+  [-180, -90], [-180, 90], [180, 90], [180, -90], [-180, -90],
+]);
+
+// ── Heatmap ───────────────────────────────────────────────────────────────────
+
+/** Compute centroid of a closed polygon ring */
+function ringCentroid(ring: number[][]): [number, number] {
+  const n = ring.length - 1; // last point == first for closed rings
+  let x = 0, y = 0;
+  for (let i = 0; i < n; i++) { x += ring[i][0]; y += ring[i][1]; }
+  return [x / n, y / n];
+}
+
+/** Pull loaded features from the active vector-tile source and build centroid points */
+function buildHeatmapPoints(
+  map: maplibregl.Map,
+  layerId: LayerId,
+): GeoJSON.FeatureCollection {
+  const raw = map.querySourceFeatures(layerId, { sourceLayer: "cells" });
+
+  // Deduplicate by H3 index (same feature can appear in multiple tiles)
+  const seen = new Set<string>();
+  const features: GeoJSON.Feature<GeoJSON.Point>[] = [];
+
+  for (const f of raw) {
+    if (f.geometry?.type !== "Polygon") continue;
+    const id = String(f.properties?.h3index ?? `${f.id}`);
+    if (seen.has(id)) continue;
+    seen.add(id);
+
+    const coords = (f.geometry as GeoJSON.Polygon).coordinates[0];
+    features.push({
+      type: "Feature",
+      properties: { score: f.properties?.score ?? 0 },
+      geometry: { type: "Point", coordinates: ringCentroid(coords) },
+    });
+  }
+
+  return { type: "FeatureCollection", features };
+}
+
+function clearHeatmapData(map: maplibregl.Map) {
+  const src = map.getSource("heatmap-points") as maplibregl.GeoJSONSource | undefined;
+  if (src) src.setData({ type: "FeatureCollection", features: [] });
+}
+
+function updateHeatmapData(map: maplibregl.Map, layerId: LayerId) {
+  const src = map.getSource("heatmap-points") as maplibregl.GeoJSONSource | undefined;
+  if (!src) return;
+  const points = buildHeatmapPoints(map, layerId);
+  // Only update if we got data — at very low zoom PMTiles tiles may not be loaded,
+  // and clearing the source would erase the last good snapshot we have.
+  if (points.features.length > 0) src.setData(points);
+}
+
+function attachHeatmapLayer(map: maplibregl.Map, basemapId: BasemapId) {
+  if (!map.getSource("heatmap-points")) {
+    map.addSource("heatmap-points", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    });
+  }
+  if (!map.getLayer("hex-heatmap")) {
+    map.addLayer({
+      id: "hex-heatmap",
+      type: "heatmap",
+      source: "heatmap-points",
+      paint: {
+        // Score drives the kernel weight
+        "heatmap-weight": [
+          "interpolate", ["linear"], ["get", "score"],
+          0, 0,
+          1, 1,
+        ],
+        // Boost intensity as zoom increases (more cells visible, need more contrast)
+        "heatmap-intensity": [
+          "interpolate", ["linear"], ["zoom"],
+          8, 1.5,
+          10, 3.0,
+          12, 4.5,
+        ],
+        // Colour ramp matching the fill gradient
+        "heatmap-color": getHeatmapColor(basemapId) as maplibregl.ExpressionSpecification,
+        // Blob radius — large at low zoom for smooth cloud effect
+        "heatmap-radius": [
+          "interpolate", ["linear"], ["zoom"],
+          8,  30,
+          9,  45,
+          10, 60,
+          12, 80,
+        ],
+        // Fade out as hexes fade in
+        "heatmap-opacity": [
+          "interpolate", ["linear"], ["zoom"],
+          ZOOM_HEAT_FADE, 1,
+          ZOOM_HEAT_GONE, 0,
+        ],
+      },
+    });
+  }
+}
+
+// ── H3 fill layers ────────────────────────────────────────────────────────────
+
+function attachPmtilesLayers(
+  map: maplibregl.Map,
+  activeLayer: LayerId,
+  gradient: unknown,
+  fillOpacity: number,
+) {
   for (const layer of LAYERS) {
     if (!layer.pmtilesUrl) continue;
     if (!map.getSource(layer.id)) {
@@ -40,120 +177,179 @@ function attachPmtilesLayers(map: maplibregl.Map, activeLayer: LayerId) {
         "source-layer": "cells",
         layout: { visibility: layer.id === activeLayer ? "visible" : "none" },
         paint: {
-          "fill-color": SCORE_GRADIENT as unknown as maplibregl.ExpressionSpecification,
-          "fill-opacity": FILL_OPACITY,
+          "fill-color": gradient as maplibregl.ExpressionSpecification,
+          "fill-opacity": [
+            "interpolate", ["linear"], ["zoom"],
+            ZOOM_HEX_START, 0,
+            ZOOM_HEX_FULL, fillOpacity,
+          ],
           "fill-antialias": false,
+        },
+      });
+
+      // Highlight layer — filtered to hovered hex via setFilter; starts with no-match filter
+      map.addLayer({
+        id: `${layer.id}-highlight`,
+        type: "line",
+        source: layer.id,
+        "source-layer": "cells",
+        layout: { visibility: layer.id === activeLayer ? "visible" : "none" },
+        filter: ["==", ["get", "h3index"], ""],
+        paint: {
+          "line-color": "#ffffff",
+          "line-width": 2,
+          "line-opacity": [
+            "interpolate", ["linear"], ["zoom"],
+            ZOOM_HEX_START, 0,
+            ZOOM_HEX_FULL, 1,
+          ],
         },
       });
     }
   }
 }
 
-// ── City boundary layers ─────────────────────────────────────────────────────
+// ── City boundary layers ──────────────────────────────────────────────────────
 
 type BoundaryGeoJson = GeoJSON.FeatureCollection<GeoJSON.Polygon | GeoJSON.MultiPolygon>;
 
 function buildMaskData(geojson: BoundaryGeoJson): GeoJSON.FeatureCollection {
-  const worldRing: number[][] = [
-    [-180, -90], [180, -90], [180, 90], [-180, 90], [-180, -90],
-  ];
   const geom = geojson.features[0].geometry;
   const rings: number[][][] =
     geom.type === "Polygon"
       ? [geom.coordinates[0] as number[][]]
       : (geom.coordinates as number[][][][]).map((p) => p[0]);
-
   return {
     type: "FeatureCollection",
     features: rings.map((ring) => ({
       type: "Feature",
       properties: {},
-      geometry: { type: "Polygon", coordinates: [worldRing, ring] },
+      geometry: { type: "Polygon", coordinates: [WORLD_RING, ensureCW(ring as number[][])] },
     })),
   };
 }
 
+
 function attachBoundaryLayers(map: maplibregl.Map, geojson: BoundaryGeoJson) {
-  const maskData = buildMaskData(geojson);
-
-  if (!map.getSource("city-mask")) {
-    map.addSource("city-mask", { type: "geojson", data: maskData });
-  } else {
-    (map.getSource("city-mask") as maplibregl.GeoJSONSource).setData(maskData);
+  try {
+    if (!map.getSource("city-mask")) {
+      map.addSource("city-mask", { type: "geojson", data: buildMaskData(geojson) });
+      map.addLayer({
+        id: "city-mask-fill",
+        type: "fill",
+        source: "city-mask",
+        paint: { "fill-color": "#000000", "fill-opacity": 0.45 },
+      });
+    }
+  } catch (e) {
+    console.error("[MapView] mask failed:", e);
   }
-  if (!map.getLayer("city-mask-fill")) {
-    map.addLayer({
-      id: "city-mask-fill",
-      type: "fill",
-      source: "city-mask",
-      paint: { "fill-color": "#0b0d12", "fill-opacity": 0.55 },
-    });
-  }
-
   if (!map.getSource("city-boundary")) {
     map.addSource("city-boundary", { type: "geojson", data: geojson });
-  } else {
-    (map.getSource("city-boundary") as maplibregl.GeoJSONSource).setData(geojson);
-  }
-  if (!map.getLayer("city-boundary-line")) {
     map.addLayer({
       id: "city-boundary-line",
       type: "line",
       source: "city-boundary",
-      paint: { "line-color": "#e8a030", "line-width": 1.5, "line-opacity": 0.55 },
+      paint: { "line-color": "#e8a030", "line-width": 2.5, "line-opacity": 0.8 },
     });
   }
 }
 
-function updateBoundary(map: maplibregl.Map, geojson: BoundaryGeoJson) {
+function refreshBoundary(map: maplibregl.Map, geojson: BoundaryGeoJson) {
   const maskSrc = map.getSource("city-mask") as maplibregl.GeoJSONSource | undefined;
-  const lineSrc = map.getSource("city-boundary") as maplibregl.GeoJSONSource | undefined;
-  if (maskSrc && lineSrc) {
+  if (maskSrc) {
     maskSrc.setData(buildMaskData(geojson));
+  } else {
+    map.addSource("city-mask", { type: "geojson", data: buildMaskData(geojson) });
+    map.addLayer({ id: "city-mask-fill", type: "fill", source: "city-mask",
+      paint: { "fill-color": "#000000", "fill-opacity": 0.45 } });
+  }
+
+  const lineSrc = map.getSource("city-boundary") as maplibregl.GeoJSONSource | undefined;
+  if (lineSrc) {
     lineSrc.setData(geojson);
   } else {
-    attachBoundaryLayers(map, geojson);
+    map.addSource("city-boundary", { type: "geojson", data: geojson });
+    map.addLayer({ id: "city-boundary-line", type: "line", source: "city-boundary",
+      paint: { "line-color": "#e8a030", "line-width": 2.5, "line-opacity": 0.8 } });
   }
 }
 
-function attachAllLayers(map: maplibregl.Map, activeLayer: LayerId, boundary: BoundaryGeoJson | null) {
-  attachPmtilesLayers(map, activeLayer);
+// ── Layer orchestration ───────────────────────────────────────────────────────
+
+function attachAllLayers(
+  map: maplibregl.Map,
+  activeLayer: LayerId,
+  boundary: BoundaryGeoJson | null,
+  basemapId: BasemapId,
+) {
+  const { gradient, opacity } = getGradientConfig(basemapId);
+  attachPmtilesLayers(map, activeLayer, gradient, opacity);
+  attachHeatmapLayer(map, basemapId);
   if (boundary) attachBoundaryLayers(map, boundary);
 }
 
-// ── Component ────────────────────────────────────────────────────────────────
+// ── Component ─────────────────────────────────────────────────────────────────
 
-export default function MapView({ activeLayer, basemap, activeCity }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<maplibregl.Map | null>(null);
+export default function MapView({ activeLayer, basemap, activeCity, basemapId }: Props) {
+  const containerRef   = useRef<HTMLDivElement>(null);
+  const mapRef         = useRef<maplibregl.Map | null>(null);
+  const popupRef       = useRef<maplibregl.Popup | null>(null);
+  const hoveredHexRef  = useRef<{ id: string | number; source: string } | null>(null);
   const activeLayerRef = useRef(activeLayer);
-  const basemapRef = useRef(basemap);
-  const activeCityRef = useRef(activeCity);
-  const boundaryRef = useRef<BoundaryGeoJson | null>(null);
+  const basemapRef     = useRef(basemap);
+  const basemapIdRef   = useRef(basemapId);
+  const activeCityRef  = useRef(activeCity);
+  const boundaryRef    = useRef<BoundaryGeoJson | null>(null);
+  const boundaryCache  = useRef<Record<string, BoundaryGeoJson>>({});
 
   useEffect(() => { activeLayerRef.current = activeLayer; }, [activeLayer]);
+  useEffect(() => { basemapIdRef.current   = basemapId;   }, [basemapId]);
 
+  // PMTiles protocol
   useEffect(() => {
     const protocol = new Protocol();
     maplibregl.addProtocol("pmtiles", protocol.tile);
     return () => maplibregl.removeProtocol("pmtiles");
   }, []);
 
-  // Fetch boundary when city changes
+  // Preload all city boundaries → instant switching
   useEffect(() => {
-    fetch(activeCity.boundaryFile)
-      .then((r) => r.json())
-      .then((data: BoundaryGeoJson) => {
-        boundaryRef.current = data;
-        const map = mapRef.current;
-        if (map && map.isStyleLoaded()) {
-          updateBoundary(map, data);
-        }
-      })
-      .catch(() => {});
-  }, [activeCity.boundaryFile]);
+    CITIES.forEach((city) => {
+      if (boundaryCache.current[city.id]) return;
+      fetch(city.boundaryFile)
+        .then((r) => r.ok ? r.json() : Promise.reject(r.status))
+        .then((data: BoundaryGeoJson) => { boundaryCache.current[city.id] = data; })
+        .catch(() => {});
+    });
+  }, []);
 
-  // Fly to city when it changes
+  // City boundary — use cache when available, otherwise fetch
+  useEffect(() => {
+    const apply = (data: BoundaryGeoJson) => {
+      boundaryRef.current = data;
+      const map = mapRef.current;
+      if (map && map.isStyleLoaded()) {
+        refreshBoundary(map, data);
+        clearHeatmapData(map);
+      }
+    };
+    const cached = boundaryCache.current[activeCity.id];
+    if (cached) { apply(cached); return; }
+
+    let cancelled = false;
+    fetch(activeCity.boundaryFile)
+      .then((r) => r.ok ? r.json() : Promise.reject(`HTTP ${r.status}`))
+      .then((data: BoundaryGeoJson) => {
+        if (cancelled) return;
+        boundaryCache.current[activeCity.id] = data;
+        apply(data);
+      })
+      .catch((e) => console.error("[MapView] boundary:", e));
+    return () => { cancelled = true; };
+  }, [activeCity.id, activeCity.boundaryFile]);
+
+  // Fly to city
   useEffect(() => {
     const map = mapRef.current;
     if (!map || activeCity.id === activeCityRef.current.id) return;
@@ -161,7 +357,7 @@ export default function MapView({ activeLayer, basemap, activeCity }: Props) {
     map.flyTo({ center: activeCity.center, zoom: activeCity.zoom, duration: 1200 });
   }, [activeCity]);
 
-  // Map initialisation
+  // Map init (once)
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
     const map = new maplibregl.Map({
@@ -170,34 +366,140 @@ export default function MapView({ activeLayer, basemap, activeCity }: Props) {
       style: basemapRef.current as any,
       center: PRAGUE_CENTER,
       zoom: PRAGUE_INITIAL_ZOOM,
+      maxZoom: 18,
     });
     map.addControl(new maplibregl.NavigationControl(), "top-right");
     mapRef.current = map;
 
-    map.on("error", () => {});
+    const popup = new maplibregl.Popup({
+      closeButton: false,
+      closeOnClick: false,
+      className: "score-popup",
+      anchor: "bottom",   // always appears above the tapped hex, never under browser chrome
+      offset: 10,
+    });
+    popupRef.current = popup;
+
     map.on("load", () => {
-      attachAllLayers(map, activeLayerRef.current, boundaryRef.current);
+      attachAllLayers(map, activeLayerRef.current, boundaryRef.current, basemapIdRef.current);
     });
 
-    return () => {
-      map.remove();
-      mapRef.current = null;
+    // Explicit colours — CSS variables may not resolve inside MapLibre popup container
+    const popupHtml = (score: number) =>
+      `<div style="padding:12px 16px;min-width:110px;background:#0f1117;border-radius:2px;box-shadow:0 4px 20px rgba(0,0,0,.6)">` +
+      `<div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#7a8a9a;margin-bottom:6px">Dostupnost</div>` +
+      `<div style="font-size:26px;font-weight:700;color:#4caf86;line-height:1">${(score * 100).toFixed(0)}<span style="font-size:14px;margin-left:3px;color:#7a8a9a">%</span></div>` +
+      `</div>`;
+
+    const clearHover = () => {
+      if (hoveredHexRef.current) {
+        const hlId = `${hoveredHexRef.current.source}-highlight`;
+        if (map.getLayer(hlId)) map.setFilter(hlId, ["==", ["get", "h3index"], ""]);
+        hoveredHexRef.current = null;
+      }
+      popup.remove();
+      map.getCanvas().style.cursor = "";
     };
+
+    // Use querySourceFeatures + geographic distance instead of queryRenderedFeatures.
+    // queryRenderedFeatures can silently return nothing when fill-opacity is low or
+    // the rendering pipeline hasn't settled; querySourceFeatures is always reliable.
+    const MAX_HIT_DEG = 0.003; // ≈ 300 m — fits inside one H3 r10 hex
+    const tryShowHex = (lngLat: maplibregl.LngLat): boolean => {
+      if (map.getZoom() < ZOOM_HEX_START) return false;
+      const sourceId = activeLayerRef.current;
+      if (!map.getSource(sourceId)) return false;
+
+      const raw = map.querySourceFeatures(sourceId, { sourceLayer: "cells" });
+      let best: ReturnType<typeof map.querySourceFeatures>[number] | null = null;
+      let bestDist = Infinity;
+      const cosLat = Math.cos(lngLat.lat * Math.PI / 180);
+      for (const f of raw) {
+        if (f.geometry?.type !== "Polygon") continue;
+        const [lng, lat] = ringCentroid((f.geometry as GeoJSON.Polygon).coordinates[0]);
+        const d = Math.hypot((lng - lngLat.lng) * cosLat, lat - lngLat.lat);
+        if (d < bestDist) { bestDist = d; best = f; }
+      }
+      if (!best || bestDist > MAX_HIT_DEG) return false;
+
+      const score = best.properties?.score ?? 0;
+      if (score <= 0) return false; // no popup for cells with zero accessibility
+
+      const h3index = best.properties?.h3index ?? String(best.id);
+      if (!h3index) return false;
+
+      if (String(hoveredHexRef.current?.id) !== String(h3index)) {
+        if (hoveredHexRef.current) {
+          const prevHl = `${hoveredHexRef.current.source}-highlight`;
+          if (map.getLayer(prevHl)) map.setFilter(prevHl, ["==", ["get", "h3index"], ""]);
+        }
+        hoveredHexRef.current = { id: String(h3index), source: sourceId };
+        const hlId = `${sourceId}-highlight`;
+        if (map.getLayer(hlId)) map.setFilter(hlId, ["==", ["get", "h3index"], h3index]);
+      }
+      map.getCanvas().style.cursor = "pointer";
+      popup.setLngLat(lngLat).setHTML(popupHtml(score)).addTo(map);
+      return true;
+    };
+
+    // Track last touch time to suppress synthesized mouse events on Android
+    let lastTouchTime = 0;
+
+    // Mobile: use MapLibre's touchend (reliable on all Android versions)
+    map.on("touchend", (e) => {
+      if (e.originalEvent.changedTouches.length !== 1) return;
+      lastTouchTime = Date.now();
+      if (!tryShowHex(e.lngLat)) clearHover();
+    });
+
+    // Desktop hover
+    map.on("mousemove", (e) => {
+      if (Date.now() - lastTouchTime < 600) return;
+      if (!tryShowHex(e.lngLat)) clearHover();
+    });
+    map.on("mouseleave", () => {
+      if (Date.now() - lastTouchTime < 600) return;
+      clearHover();
+    });
+
+    // Desktop click fallback
+    map.on("click", (e) => {
+      if (Date.now() - lastTouchTime < 600) return;
+      if (!tryShowHex(e.lngLat)) clearHover();
+    });
+
+    // Close popup on user-initiated pan/zoom (not on programmatic flyTo)
+    map.on("movestart", (e) => {
+      if ((e as { originalEvent?: Event }).originalEvent) clearHover();
+    });
+
+    map.on("idle", () => {
+      updateHeatmapData(map, activeLayerRef.current);
+    });
+
+    // Also update on moveend for better responsiveness at low zoom
+    map.on("moveend", () => {
+      if (map.getZoom() < ZOOM_HEX_FULL) {
+        updateHeatmapData(map, activeLayerRef.current);
+      }
+    });
+
+    return () => { map.remove(); mapRef.current = null; };
   }, []);
 
-  // Basemap switching
+  // Basemap switch
   useEffect(() => {
     const map = mapRef.current;
     if (!map || basemap === basemapRef.current) return;
     basemapRef.current = basemap;
     map.once("style.load", () => {
-      attachAllLayers(map, activeLayerRef.current, boundaryRef.current);
+      attachAllLayers(map, activeLayerRef.current, boundaryRef.current, basemapIdRef.current);
     });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     map.setStyle(basemap as any);
   }, [basemap]);
 
-  // Active layer visibility
+  // Layer visibility + heatmap refresh
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
@@ -206,7 +508,11 @@ export default function MapView({ activeLayer, basemap, activeCity }: Props) {
       if (map.getLayer(`${layer.id}-fill`)) {
         map.setLayoutProperty(`${layer.id}-fill`, "visibility", vis);
       }
+      if (map.getLayer(`${layer.id}-highlight`)) {
+        map.setLayoutProperty(`${layer.id}-highlight`, "visibility", vis);
+      }
     }
+    clearHeatmapData(map);
   }, [activeLayer]);
 
   return <div ref={containerRef} className="w-full h-full" />;

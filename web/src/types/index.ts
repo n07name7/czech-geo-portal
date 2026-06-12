@@ -12,7 +12,7 @@ export type LayerId =
 export interface LayerConfig {
   id: LayerId;
   labelKey: string;
-  icon: string;
+  icon?: string;
   pmtilesUrl: string;
 }
 

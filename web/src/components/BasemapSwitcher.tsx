@@ -11,7 +11,10 @@ interface Props {
 export default function BasemapSwitcher({ activeBasemap, onChange }: Props) {
   const t = useTranslations("basemap");
   return (
-    <div className="absolute bottom-10 right-4 z-10 flex flex-col border border-[var(--border)]">
+    <div
+      className="absolute right-4 z-10 flex flex-col border border-[var(--border)]"
+      style={{ bottom: "calc(2.5rem + env(safe-area-inset-bottom, 0px))" }}
+    >
       {BASEMAPS.map((bm) => (
         <button
           key={bm.id}

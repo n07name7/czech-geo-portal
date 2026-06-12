@@ -4,19 +4,87 @@ export const MAP_STYLE_URL =
 export const PRAGUE_CENTER: [number, number] = [14.437, 50.073];
 export const PRAGUE_INITIAL_ZOOM = 12;
 
-// Colors match landing page hex visualization (dark green → amber)
-export const SCORE_GRADIENT = [
-  "interpolate",
-  ["linear"],
-  ["get", "score"],
-  0,    "rgba(0,0,0,0)",
-  0.08, "#111820",
-  0.22, "#162d22",
-  0.40, "#1d5c38",
-  0.58, "#388c42",
-  0.72, "#79b025",
-  0.85, "#c49020",
-  1.0,  "#e8a030",
-] as const;
+// ── Fill gradients (для zoom ≥ 11, отдельные гексы) ──────────────────────────
 
-export const FILL_OPACITY = 0.82;
+export const SCORE_GRADIENT = [
+  "interpolate", ["linear"], ["get", "score"],
+  0,    "rgba(0,0,0,0)",
+  0.05, "rgba(25, 45, 65, 0.4)",
+  0.20, "#1a3a3a",
+  0.40, "#1d7c48",
+  0.60, "#52b146",
+  0.80, "#d2e022",
+  1.0,  "#fcd230",
+];
+
+export const SCORE_GRADIENT_LIGHT = [
+  "interpolate", ["linear"], ["get", "score"],
+  0,    "rgba(0,0,0,0)",
+  0.10, "#fff5cc",
+  0.30, "#ffd27f",
+  0.50, "#ff9540",
+  0.70, "#e65a28",
+  0.90, "#b32400",
+  1.0,  "#801a00",
+];
+
+export const SCORE_GRADIENT_SATELLITE = [
+  "interpolate", ["linear"], ["get", "score"],
+  0,    "rgba(0,0,0,0)",
+  0.10, "rgba(0,242,255,0.6)",
+  0.35, "#00ccff",
+  0.60, "#00ff88",
+  0.80, "#ffff00",
+  1.0,  "#ff3300",
+];
+
+// ── Heatmap colours (для zoom < 11, density → colour) ────────────────────────
+
+export const HEATMAP_COLOR_DARK = [
+  "interpolate", ["linear"], ["heatmap-density"],
+  0,    "rgba(0,0,0,0)",
+  0.10, "rgba(29, 124, 72, 0.5)",
+  0.30, "#1d7c48",
+  0.55, "#52b146",
+  0.80, "#d2e022",
+  1.0,  "#fcd230",
+];
+
+export const HEATMAP_COLOR_LIGHT = [
+  "interpolate", ["linear"], ["heatmap-density"],
+  0,    "rgba(255,255,255,0)",
+  0.15, "#ffd27f",
+  0.40, "#ff9540",
+  0.65, "#e65a28",
+  0.85, "#b32400",
+  1.0,  "#801a00",
+];
+
+export const HEATMAP_COLOR_SATELLITE = [
+  "interpolate", ["linear"], ["heatmap-density"],
+  0,    "rgba(0,0,0,0)",
+  0.15, "#00ccff",
+  0.40, "#00ff88",
+  0.70, "#ffff00",
+  1.0,  "#ff3300",
+];
+
+export function getHeatmapColor(basemapId: string): unknown[] {
+  if (basemapId === "svetla")  return HEATMAP_COLOR_LIGHT;
+  if (basemapId === "satelit") return HEATMAP_COLOR_SATELLITE;
+  return HEATMAP_COLOR_DARK;
+}
+
+// ── Legend CSS gradients ──────────────────────────────────────────────────────
+
+export const LEGEND_GRADIENT_CSS: Record<string, string> = {
+  tmava:   "linear-gradient(to right, #1a3a3a, #1d7c48, #52b146, #d2e022, #fcd230)",
+  svetla:  "linear-gradient(to right, #fff5cc, #ffd27f, #ff9540, #e65a28, #801a00)",
+  satelit: "linear-gradient(to right, #00ccff, #00ff88, #ffff00, #ff3300)",
+};
+
+// ── Opacities ─────────────────────────────────────────────────────────────────
+
+export const FILL_OPACITY           = 0.82;
+export const FILL_OPACITY_LIGHT     = 0.76;
+export const FILL_OPACITY_SATELLITE = 0.82;

@@ -11,13 +11,16 @@ export default function LayerToggle({ active, label, onClick }: Props) {
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-3 w-full px-3 py-2 text-left transition-colors ${
+      className={`group flex items-center gap-3 w-full px-4 py-3 text-left transition-all duration-200 border-l-2 ${
         active
-          ? "bg-[var(--accent-glow)] text-[var(--accent)] font-medium border-l-2 border-[var(--accent)]"
-          : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--card)] border-l-2 border-transparent"
+          ? "bg-[var(--accent-glow)] text-[var(--accent)] font-semibold border-[var(--accent)]"
+          : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--card)] border-transparent"
       }`}
     >
-      <span className="font-body text-xs leading-snug">{label}</span>
+      <span className="font-body text-xs leading-none tracking-wide">{label}</span>
+      {active && (
+        <span className="ml-auto w-1 h-1 rounded-full bg-[var(--accent)]" />
+      )}
     </button>
   );
 }
