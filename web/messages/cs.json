@@ -64,6 +64,11 @@
     "overall": "Celkové skóre",
     "pdfTitle": "Kompletní PDF report",
     "pdfDesc": "Detailní rozbor lokality se všemi vrstvami, srovnáním a zdroji.",
+    "pdfDownload": "Stáhnout PDF",
+    "pdfWait": "Přesměrování…",
+    "pdfBuy": "Koupit PDF za {price} Kč",
+    "proHint": "Často hledáte? Vyzkoušejte",
+    "proLink": "předplatné Pro",
     "pdfSoon": "Brzy k dispozici"
   }
 }

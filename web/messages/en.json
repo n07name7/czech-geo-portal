@@ -64,6 +64,11 @@
     "overall": "Overall score",
     "pdfTitle": "Full PDF report",
     "pdfDesc": "Detailed location analysis with all layers, comparison and sources.",
+    "pdfDownload": "Download PDF",
+    "pdfWait": "Redirecting…",
+    "pdfBuy": "Buy PDF for {price} CZK",
+    "proHint": "Searching often? Try",
+    "proLink": "Pro subscription",
     "pdfSoon": "Coming soon"
   }
 }

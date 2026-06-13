@@ -2,10 +2,11 @@
 
 import dynamic from "next/dynamic";
 import { useState, useRef, useEffect, useMemo } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import NavBar from "@/components/NavBar";
 import { LAYERS } from "@/lib/layers";
 import { geocode, type GeocodeResult } from "@/lib/geocode";
+import { REPORT_PRICE_CZK, PAYMENTS_VISIBLE } from "@/lib/payment";
 
 const ReportMap = dynamic(() => import("@/components/ReportMap"), { ssr: false });
 
@@ -20,19 +21,74 @@ function scoreColor(v: number): string {
 
 export default function ReportPage() {
   const t = useTranslations();
+  const locale = useLocale();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<GeocodeResult[]>([]);
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<GeocodeResult | null>(null);
   const [scores, setScores] = useState<Record<string, number> | null>(null);
   const [loading, setLoading] = useState(false);
+  const [paidSession, setPaidSession] = useState<string | null>(null);
+  const [buying, setBuying] = useState(false);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const justSelected = useRef(false);
+  // Query value for which search must NOT run (set by a selection or the
+  // paid-return restore) — deterministic regardless of effect timing.
+  const skipQuery = useRef<string | null>(null);
+
+  // Returning from checkout: ?paid=<session>&address=<label> — restore the
+  // report by re-geocoding the address and selecting it, so the unlocked
+  // download button appears.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paid = params.get("paid");
+    if (!paid) return;
+    setPaidSession(paid);
+    const addr = params.get("address");
+    if (!addr) return;
+    skipQuery.current = addr;
+    setQuery(addr);
+    setLoading(true);
+    geocode(addr).then((rs) => {
+      if (rs[0]) setSelected(rs[0]);
+      else setLoading(false);
+    });
+  }, []);
+
+  const startCheckout = async (mode: "payment" | "subscription") => {
+    setBuying(true);
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode, address: selected?.label, locale }),
+      });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+    } finally {
+      setBuying(false);
+    }
+  };
+
+  const downloadPdf = async () => {
+    const res = await fetch("/api/report/pdf", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ address: selected?.label ?? query, scores, session: paidSession }),
+    });
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "report.pdf";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   useEffect(() => {
     if (debounce.current) clearTimeout(debounce.current);
-    // skip the search that the selection itself triggers (query := label)
-    if (justSelected.current) { justSelected.current = false; return; }
+    // don't re-search a value that a selection or restore just set
+    if (query === skipQuery.current) return;
     if (query.trim().length < 3) { setResults([]); return; }
     debounce.current = setTimeout(async () => {
       setResults(await geocode(query));
@@ -41,7 +97,7 @@ export default function ReportPage() {
   }, [query]);
 
   const select = (r: GeocodeResult) => {
-    justSelected.current = true;
+    skipQuery.current = r.label;
     setSelected(r);
     setQuery(r.label);
     setOpen(false);
@@ -151,16 +207,44 @@ export default function ReportPage() {
                     ))}
                   </div>
 
-                  {/* PDF CTA — wired to payment in Phase C2 */}
+                  {/* PDF purchase / download */}
                   <div className="border border-[var(--accent)] border-opacity-40 p-4 bg-[var(--card)]">
                     <p className="font-body text-sm text-[var(--text)] mb-1">{t("report.pdfTitle")}</p>
                     <p className="font-body text-xs text-[var(--text-muted)] mb-3">{t("report.pdfDesc")}</p>
-                    <button
-                      disabled
-                      className="px-4 py-2 text-xs font-body uppercase tracking-[0.16em] bg-[var(--accent)] text-[#0b0d12] opacity-50 cursor-not-allowed"
-                    >
-                      {t("report.pdfSoon")}
-                    </button>
+                    {!PAYMENTS_VISIBLE ? (
+                      <button
+                        disabled
+                        className="px-4 py-2 text-xs font-body uppercase tracking-[0.16em] bg-[var(--accent)] text-[#0b0d12] opacity-50 cursor-not-allowed"
+                      >
+                        {t("report.pdfSoon")}
+                      </button>
+                    ) : paidSession ? (
+                      <button
+                        onClick={downloadPdf}
+                        className="px-4 py-2 text-xs font-body uppercase tracking-[0.16em] bg-[var(--accent)] text-[#0b0d12] hover:opacity-90 transition-opacity"
+                      >
+                        {t("report.pdfDownload")}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => startCheckout("payment")}
+                        disabled={buying}
+                        className="px-4 py-2 text-xs font-body uppercase tracking-[0.16em] bg-[var(--accent)] text-[#0b0d12] hover:opacity-90 transition-opacity disabled:opacity-50"
+                      >
+                        {buying ? t("report.pdfWait") : t("report.pdfBuy", { price: REPORT_PRICE_CZK })}
+                      </button>
+                    )}
+                    {PAYMENTS_VISIBLE && (
+                      <p className="mt-3 text-[10px] font-body text-[var(--text-faint)]">
+                        {t("report.proHint")}{" "}
+                        <button
+                          onClick={() => startCheckout("subscription")}
+                          className="underline hover:text-[var(--accent)] transition-colors"
+                        >
+                          {t("report.proLink")}
+                        </button>
+                      </p>
+                    )}
                   </div>
                 </>
               )}
