@@ -17,7 +17,10 @@ from src.fetch.osm import fetch_osm_pois
 from src.fetch.msmt import fetch_msmt_pois
 from src.fetch.nrpzs import fetch_nrpzs_pois
 from src.fetch.gtfs import fetch_gtfs_stops
+from src.fetch.noise import fetch_noise_polygons
+from src.fetch.crime import fetch_crime_points
 from src.score.h3_scorer import get_city_cells, score_cells
+from src.score.noise_scorer import score_cells_quiet
 from src.build.pmtiles import build_pmtiles
 
 OUTPUT_DIR = Path("output/cities")
@@ -87,6 +90,10 @@ LAYERS: list[dict] = [
     {"name": "parks",         "fetcher": lambda bbox: fetch_osm_pois("parks", bbox)},
     {"name": "sports",        "fetcher": lambda bbox: fetch_osm_pois("sports", bbox)},
     {"name": "shops",         "fetcher": lambda bbox: fetch_osm_pois("shops", bbox)},
+    # zonal layers: fetcher returns polygons, scored by coverage instead of POI count
+    {"name": "quiet",         "fetcher": fetch_noise_polygons, "kind": "zonal"},
+    # inverted layers: density is bad — score flipped so 1.0 = safest
+    {"name": "safety",        "fetcher": fetch_crime_points, "invert": True},
 ]
 
 
@@ -140,16 +147,21 @@ def main(dry_run: bool = False, only_city: str | None = None) -> None:
         all_scores: dict[str, float] = {}
 
         for city in cities:
-            print(f"[{layer_name}] {city['name']}: fetching POIs...")
+            print(f"[{layer_name}] {city['name']}: fetching...")
             try:
-                pois = layer["fetcher"](city["bbox"])
-                print(f"  {len(pois)} POIs")
+                fetched = layer["fetcher"](city["bbox"])
+                print(f"  {len(fetched)} objects")
             except Exception as e:
                 print(f"  ERROR: {e}")
                 continue
 
             cells = get_city_cells(city["bbox"], RESOLUTION)
-            scores = score_cells(pois, cells)
+            if layer.get("kind") == "zonal":
+                scores = score_cells_quiet(fetched, cells)
+            else:
+                scores = score_cells(fetched, cells)
+                if layer.get("invert"):
+                    scores = {c: 1.0 - v for c, v in scores.items()}
             all_scores.update(scores)
             print(f"  {len(cells)} cells scored")
 

@@ -12,4 +12,6 @@ export const LAYERS: LayerConfig[] = [
   { id: "parks",         labelKey: "layers.parks",         pmtilesUrl: `${R2_BASE}/parks.pmtiles` },
   { id: "sports",        labelKey: "layers.sports",        pmtilesUrl: `${R2_BASE}/sports.pmtiles` },
   { id: "shops",         labelKey: "layers.shops",         pmtilesUrl: `${R2_BASE}/shops.pmtiles` },
+  { id: "quiet",         labelKey: "layers.quiet",         pmtilesUrl: `${R2_BASE}/quiet.pmtiles` },
+  { id: "safety",        labelKey: "layers.safety",        pmtilesUrl: `${R2_BASE}/safety.pmtiles` },
 ];

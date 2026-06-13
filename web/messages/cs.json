@@ -1,16 +1,24 @@
 {
-  "ui": { "city": "Město", "layers": "Vrstvy" },
-  "legend": { "low": "méně", "high": "více" },
+  "ui": {
+    "city": "Město",
+    "layers": "Vrstvy"
+  },
+  "legend": {
+    "low": "méně",
+    "high": "více"
+  },
   "layers": {
-    "schools":       "Základní školy",
+    "schools": "Základní školy",
     "kindergartens": "Mateřské školy",
-    "playgrounds":   "Dětská hřiště",
-    "clinics":       "Lékaři / kliniky",
-    "pharmacies":    "Lékárny",
-    "transport":     "Zastávky MHD",
-    "parks":         "Parky",
-    "sports":        "Sportoviště",
-    "shops":         "Obchody"
+    "playgrounds": "Dětská hřiště",
+    "clinics": "Lékaři / kliniky",
+    "pharmacies": "Lékárny",
+    "transport": "Zastávky MHD",
+    "parks": "Parky",
+    "sports": "Sportoviště",
+    "shops": "Obchody",
+    "quiet": "Klid (hluk)",
+    "safety": "Bezpečnost"
   },
   "nav": {
     "map": "Mapa",

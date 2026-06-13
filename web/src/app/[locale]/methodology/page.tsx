@@ -11,6 +11,8 @@ const DATA_SOURCES = [
   { layer: "Parky", source: "OpenStreetMap (ODbL)", freq: "Týdně" },
   { layer: "Sportoviště", source: "OpenStreetMap (ODbL)", freq: "Týdně" },
   { layer: "Obchody s potravinami", source: "OpenStreetMap (ODbL)", freq: "Týdně" },
+  { layer: "Klid (hluk)", source: "Strategické hlukové mapy 2022, MZ ČR", freq: "Týdně" },
+  { layer: "Bezpečnost", source: "Mapa kriminality, Policie ČR (12 měsíců)", freq: "Týdně" },
 ];
 
 const SCORING_STEPS = [

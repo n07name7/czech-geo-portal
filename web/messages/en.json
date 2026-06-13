@@ -1,16 +1,24 @@
 {
-  "ui": { "city": "City", "layers": "Layers" },
-  "legend": { "low": "less", "high": "more" },
+  "ui": {
+    "city": "City",
+    "layers": "Layers"
+  },
+  "legend": {
+    "low": "less",
+    "high": "more"
+  },
   "layers": {
-    "schools":       "Primary schools",
+    "schools": "Primary schools",
     "kindergartens": "Kindergartens",
-    "playgrounds":   "Playgrounds",
-    "clinics":       "Clinics / doctors",
-    "pharmacies":    "Pharmacies",
-    "transport":     "Public transport stops",
-    "parks":         "Parks",
-    "sports":        "Sports facilities",
-    "shops":         "Grocery shops"
+    "playgrounds": "Playgrounds",
+    "clinics": "Clinics / doctors",
+    "pharmacies": "Pharmacies",
+    "transport": "Public transport stops",
+    "parks": "Parks",
+    "sports": "Sports facilities",
+    "shops": "Grocery shops",
+    "quiet": "Quietness (noise)",
+    "safety": "Safety"
   },
   "nav": {
     "map": "Map",
