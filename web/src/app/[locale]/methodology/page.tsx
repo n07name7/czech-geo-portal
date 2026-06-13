@@ -16,9 +16,9 @@ const DATA_SOURCES = [
 ];
 
 const SCORING_STEPS = [
-  "POI v okruhu 800 m",
-  "Počet objektů",
-  "Normalizace 0–1",
+  "Buňky H3 (~150 m)",
+  "Skóre dle typu vrstvy",
+  "Normalizace 0–1 ve městě",
   "Barva na mapě",
 ];
 
@@ -31,6 +31,7 @@ export default function MethodologyPage() {
         <AboutSection />
         <SourcesSection />
         <ScoringSection />
+        <MatchSection />
       </main>
     </div>
   );
@@ -124,9 +125,20 @@ function ScoringSection() {
       {/* Technical note */}
       <div className="border-l-2 border-[var(--accent)] border-opacity-40 pl-4">
         <p className="font-body text-xs text-[var(--text-faint)] leading-relaxed">
-          H3 rozlišení 10 · každá buňka ≈ 150 × 150 m · okruh 800 m od středu buňky
+          Základní rozlišení H3 10 (buňka ≈ 150 × 150 m); při oddálení se zobrazují
+          větší buňky. Okruh 800 m od středu buňky.
         </p>
       </div>
+    </section>
+  );
+}
+
+function MatchSection() {
+  const t = useTranslations("methodology");
+  return (
+    <section className="space-y-4">
+      <h2 className="font-display text-2xl text-[var(--text)]">{t("matchTitle")}</h2>
+      <p className="font-body text-[var(--text-muted)] leading-relaxed">{t("matchText")}</p>
     </section>
   );
 }

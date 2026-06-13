@@ -44,10 +44,12 @@
   "methodology": {
     "title": "Methodology",
     "aboutTitle": "About the project",
-    "aboutText": "Czech Geo Portal helps people choose the right place to live. It displays infrastructure density in Prague neighbourhoods using the H3 hexagonal grid. The portal is designed for both Czechs and expats looking for their ideal neighbourhood.",
+    "aboutText": "We help you choose the right place to live. For every neighborhood we show the availability and quality of nearby infrastructure on an H3 hex grid — from schools and shops to transport, quiet and safety. Built for locals and expats looking for the ideal neighborhood. City coverage is expanding over time.",
     "sourcesTitle": "Data sources",
     "scoringTitle": "How the score is calculated",
-    "scoringText": "For each hexagonal cell (H3 resolution 10, ~150×150 m) we count the number of objects within an 800 m radius from the cell centre. The result is normalised to a 0–1 scale across the whole city. A score of 1 means the best accessibility in Prague; 0 means no infrastructure within reach."
+    "scoringText": "We split the city into H3 hex cells (~150×150 m). For most layers we count objects within 800 m of the cell center (≈10 min walk). Quiet is derived from strategic noise maps (less noise = higher score) and safety from crime density (fewer incidents = higher score). Scores are normalized 0–1 within each city — 1 is the best value in the city, 0 the worst.",
+    "matchTitle": "Match me — your own weights",
+    "matchText": "In “Match me” mode you set how important each criterion is. The map computes a weighted average of all layer scores and colors neighborhoods by how well they fit your priorities — instantly, in the browser, with no server."
   },
   "basemap": {
     "svetla": "Light",

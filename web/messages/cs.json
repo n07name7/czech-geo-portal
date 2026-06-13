@@ -44,10 +44,12 @@
   "methodology": {
     "title": "Metodologie",
     "aboutTitle": "O projektu",
-    "aboutText": "Czech Geo Portal pomáhá lidem vybrat správné místo k životu. Zobrazuje hustotu infrastruktury v pražských čtvrtích pomocí hexagonální sítě H3. Portál je určen pro Čechy i expaty hledající ideální čtvrť.",
+    "aboutText": "Pomáháme vybrat správné místo k životu. Pro každou čtvrť ukazujeme dostupnost a kvalitu okolní infrastruktury pomocí hexagonální sítě H3 — od škol a obchodů přes dopravu až po klid a bezpečnost. Určeno Čechům i expatům, kteří hledají ideální čtvrť. Pokrytí měst postupně rozšiřujeme.",
     "sourcesTitle": "Zdroje dat",
     "scoringTitle": "Jak se počítá skóre",
-    "scoringText": "Pro každou hexagonální buňku (H3 rozlišení 10, ~150×150 m) počítáme počet objektů v okruhu 800 m od středu buňky. Výsledek normalizujeme na škálu 0–1 v rámci celého města. Skóre 1 znamená nejlepší dostupnost v Praze, 0 znamená žádná infrastruktura v dosahu."
+    "scoringText": "Město dělíme na hexagonální buňky H3 (~150×150 m). U většiny vrstev počítáme počet objektů v okruhu 800 m od středu buňky (≈10 minut chůze). Klid odvozujeme ze strategických hlukových map (méně hluku = vyšší skóre) a bezpečnost z hustoty kriminality (méně případů = vyšší skóre). Výsledek normalizujeme na škálu 0–1 v rámci daného města — skóre 1 znamená nejlepší hodnotu ve městě, 0 nejhorší.",
+    "matchTitle": "Podle mě — vlastní váhy",
+    "matchText": "V režimu „Podle mě\" si u každého kritéria nastavíte důležitost. Mapa spočítá vážený průměr skóre všech vrstev a obarví čtvrti podle toho, jak sedí právě vašim prioritám — okamžitě, přímo v prohlížeči, bez serveru."
   },
   "basemap": {
     "svetla": "Světlá",
