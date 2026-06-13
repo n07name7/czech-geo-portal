@@ -106,7 +106,12 @@ export default function ReportPage() {
     setLoading(true);
   };
 
-  useEffect(() => { if (scores) setLoading(false); }, [scores]);
+  // ReportMap resolves with scores or null (outside coverage / timeout);
+  // either way the lookup is done.
+  const handleScores = (s: Record<string, number> | null) => {
+    setScores(s);
+    setLoading(false);
+  };
 
   const overall = useMemo(() => {
     if (!scores) return 0;
@@ -161,13 +166,18 @@ export default function ReportPage() {
           <div className="grid md:grid-cols-2 gap-6">
             {/* Map */}
             <div className="h-72 md:h-[28rem] border border-[var(--border)] overflow-hidden">
-              <ReportMap lat={selected.lat} lon={selected.lon} onScores={setScores} />
+              <ReportMap lat={selected.lat} lon={selected.lon} onScores={handleScores} />
             </div>
 
             {/* Report */}
             <div>
               {loading && (
-                <p className="font-body text-sm text-[var(--text-faint)]">{t("report.loading")}</p>
+                <div>
+                  <p className="font-body text-sm text-[var(--text-faint)] mb-3">{t("report.loading")}</p>
+                  <div className="h-1 w-full bg-[var(--card)] overflow-hidden rounded">
+                    <div className="h-full w-1/3 bg-[var(--accent)] rounded animate-[loadingbar_1.1s_ease-in-out_infinite]" />
+                  </div>
+                </div>
               )}
               {!loading && scores && (
                 <>

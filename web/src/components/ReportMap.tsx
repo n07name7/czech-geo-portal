@@ -35,6 +35,12 @@ export default function ReportMap({ lat, lon, onScores }: Props) {
   const onScoresRef = useRef(onScores);
   useEffect(() => { onScoresRef.current = onScores; }, [onScores]);
 
+  // Current target + per-lookup resolution state, kept in refs so the single
+  // idle handler always sees the latest values and each address re-arms.
+  const target = useRef({ lat, lon });
+  const resolved = useRef(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     const protocol = new Protocol();
     maplibregl.addProtocol("pmtiles", protocol.tile);
@@ -75,36 +81,59 @@ export default function ReportMap({ lat, lon, onScores }: Props) {
       .setLngLat([lon, lat])
       .addTo(map);
 
+    const resolve = (s: Record<string, number> | null) => {
+      if (resolved.current) return;
+      resolved.current = true;
+      if (timer.current) clearTimeout(timer.current);
+      onScoresRef.current(s);
+    };
+
     const readScores = () => {
+      if (resolved.current) return;
+      const { lat: tlat, lon: tlon } = target.current;
       const raw = map.querySourceFeatures("combined", { sourceLayer: "cells" });
+      if (raw.length === 0) return; // tiles not loaded yet — wait for next idle
       let best: (typeof raw)[number] | null = null;
       let bestDist = Infinity;
-      const cosLat = Math.cos(lat * Math.PI / 180);
+      const cosLat = Math.cos(tlat * Math.PI / 180);
       for (const f of raw) {
         if (f.geometry?.type !== "Polygon") continue;
         const [flng, flat] = ringCentroid((f.geometry as GeoJSON.Polygon).coordinates[0]);
-        const d = Math.hypot((flng - lon) * cosLat, flat - lat);
+        const d = Math.hypot((flng - tlon) * cosLat, flat - tlat);
         if (d < bestDist) { bestDist = d; best = f; }
       }
-      if (!best || bestDist > 0.004) { onScoresRef.current(null); return; }
+      if (!best || bestDist > 0.004) { resolve(null); return; } // outside coverage
       const props = best.properties ?? {};
       const scores: Record<string, number> = {};
       for (const l of LAYERS) scores[l.id] = Number(props[l.id]) || 0;
-      onScoresRef.current(scores);
+      resolve(scores);
     };
 
     map.on("idle", readScores);
 
-    return () => { map.remove(); mapRef.current = null; };
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
+      map.remove();
+      mapRef.current = null;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // move to a new address
+  // new address → re-arm the lookup and fly there
   useEffect(() => {
+    target.current = { lat, lon };
+    resolved.current = false;
+    if (timer.current) clearTimeout(timer.current);
+    // safety net so the UI never hangs if tiles stall
+    timer.current = setTimeout(() => {
+      if (!resolved.current) { resolved.current = true; onScoresRef.current(null); }
+    }, 15000);
+
     const map = mapRef.current;
     if (!map) return;
     markerRef.current?.setLngLat([lon, lat]);
-    map.flyTo({ center: [lon, lat], zoom: 14, duration: 800 });
+    // jumpTo (no animation) so scores resolve as soon as tiles load
+    map.jumpTo({ center: [lon, lat], zoom: 14 });
   }, [lat, lon]);
 
   return <div ref={containerRef} className="w-full h-full" />;

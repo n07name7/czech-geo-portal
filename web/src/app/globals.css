@@ -62,6 +62,16 @@ h4 {
   }
 }
 
+/* Indeterminate progress bar (report loading) */
+@keyframes loadingbar {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}
+
 /* Push MapLibre top-right controls below the floating NavBar */
 .maplibregl-ctrl-top-right {
   margin-top: 56px;
