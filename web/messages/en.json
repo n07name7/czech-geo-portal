@@ -31,16 +31,19 @@
   },
   "landing": {
     "headline": "Where in Czechia?",
-    "subheadline": "Compare Prague neighbourhoods by schools, parks, transport, and more infrastructure layers.",
+    "subheadline": "Compare neighbourhoods by schools, quiet, safety, transport and more — and find the right one for you.",
     "cta": "Open map",
     "layersTitle": "What the portal shows",
     "howTitle": "How it works",
-    "step1Label": "Choose a layer",
-    "step1Desc": "Schools, parks, transport, and more.",
-    "step2Label": "Explore the map",
-    "step2Desc": "The heatmap shows infrastructure density.",
-    "step3Label": "Compare neighbourhoods",
-    "step3Desc": "Find the area with the best accessibility."
+    "step1Label": "Explore the layers",
+    "step1Desc": "Schools, quiet, safety, transport and more, right on the map.",
+    "step2Label": "Set your priorities",
+    "step2Desc": "In “Match me” mode pick what matters and find your neighbourhood.",
+    "step3Label": "Address report",
+    "step3Desc": "Enter a specific address and get a rating of its surroundings.",
+    "eyebrow": "Quality of living",
+    "statSource": "Czech public data",
+    "statLayers": "{count} data layers"
   },
   "methodology": {
     "title": "Methodology",

@@ -131,7 +131,7 @@ export default async function LandingPage() {
           style={{ animation: "fadeUp 0.7s ease both" }}
         >
           <span className="text-[10px] tracking-[0.25em] uppercase text-[var(--accent)] font-body mb-6 block">
-            Praha · Infrastruktura
+            <Eyebrow />
           </span>
 
           <h1 className="font-display text-[clamp(3.2rem,7vw,6rem)] leading-[0.95] text-[var(--text)] mb-6">
@@ -161,11 +161,11 @@ export default async function LandingPage() {
           </div>
 
           <div className="flex flex-wrap gap-x-4 gap-y-2 text-[11px] tracking-wider text-[var(--text-faint)] font-body uppercase">
-            <span>9 vrstev dat</span>
+            <span><StatLayers /></span>
             <span className="text-[var(--border)] hidden sm:inline">·</span>
-            <span>H3 rozlišení 10</span>
+            <span>H3</span>
             <span className="text-[var(--border)] hidden sm:inline">·</span>
-            <span>OSM zdroj</span>
+            <span><StatSource /></span>
           </div>
         </div>
 
@@ -224,7 +224,7 @@ export default async function LandingPage() {
           Kam v Česku?
         </span>
         <span className="font-body text-xs text-[var(--text-faint)]">
-          Data © OpenStreetMap contributors · <Link href={`/${locale}/methodology`} className="hover:text-[var(--accent)] transition-colors">Metodologie</Link>
+          Data: veřejné registry ČR · OpenStreetMap · <Link href={`/${locale}/methodology`} className="hover:text-[var(--accent)] transition-colors">Metodologie</Link>
         </span>
       </footer>
     </div>
@@ -251,6 +251,21 @@ function HeroHeadline() {
 function HeroSub() {
   const t = useTranslations("landing");
   return <>{t("subheadline")}</>;
+}
+
+function Eyebrow() {
+  const t = useTranslations("landing");
+  return <>{t("eyebrow")}</>;
+}
+
+function StatLayers() {
+  const t = useTranslations("landing");
+  return <>{t("statLayers", { count: LAYERS.length })}</>;
+}
+
+function StatSource() {
+  const t = useTranslations("landing");
+  return <>{t("statSource")}</>;
 }
 
 function CtaLabel() {

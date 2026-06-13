@@ -31,16 +31,19 @@
   },
   "landing": {
     "headline": "Kam v Česku?",
-    "subheadline": "Porovnejte čtvrti v Praze podle škol, parků, dopravy a dalších vrstev infrastruktury.",
+    "subheadline": "Porovnejte čtvrti podle škol, klidu, bezpečnosti, dopravy a dalších — a najděte tu pravou pro sebe.",
     "cta": "Otevřít mapu",
     "layersTitle": "Co portál zobrazuje",
     "howTitle": "Jak to funguje?",
-    "step1Label": "Vyber vrstvu",
-    "step1Desc": "Školy, parky, dopravu a další.",
-    "step2Label": "Prozkoumej mapu",
-    "step2Desc": "Teplá mapa ukazuje hustotu infrastruktury.",
-    "step3Label": "Porovnej čtvrtě",
-    "step3Desc": "Najdi район s nejlepší dostupností."
+    "step1Label": "Prozkoumej vrstvy",
+    "step1Desc": "Školy, klid, bezpečnost, dopravu a další přímo na mapě.",
+    "step2Label": "Nastav priority",
+    "step2Desc": "V režimu „Podle mě\" zvol, co je pro tebe důležité, a najdi svou čtvrť.",
+    "step3Label": "Report podle adresy",
+    "step3Desc": "Zadej konkrétní adresu a získej hodnocení jejího okolí.",
+    "eyebrow": "Kvalita bydlení",
+    "statSource": "Veřejná data ČR",
+    "statLayers": "{count} vrstev dat"
   },
   "methodology": {
     "title": "Metodologie",
