@@ -132,15 +132,30 @@ def upload_to_github_release(files: list[Path], tag: str = "data-latest") -> Non
     }
     api = "https://api.github.com"
 
-    r = req.get(f"{api}/repos/{repo}/releases/tags/{tag}", headers=headers)
-    if r.status_code == 200:
-        release_id = r.json()["id"]
-        req.delete(f"{api}/repos/{repo}/releases/{release_id}", headers=headers)
+    # Delete ALL releases carrying this tag, including drafts. The previous
+    # code used GET /releases/tags/{tag}, which never returns drafts — so
+    # draft releases piled up and the public download URL served a stale one.
+    page = 1
+    while True:
+        r = req.get(f"{api}/repos/{repo}/releases",
+                    headers=headers, params={"per_page": 100, "page": page})
+        r.raise_for_status()
+        releases = r.json()
+        if not releases:
+            break
+        for rel in releases:
+            if rel.get("tag_name") == tag:
+                req.delete(f"{api}/repos/{repo}/releases/{rel['id']}", headers=headers)
+        page += 1
     req.delete(f"{api}/repos/{repo}/git/refs/tags/{tag}", headers=headers)
 
+    # target_commitish + draft=false → tag is created on master and the
+    # release is published, so releases/download/{tag}/… resolves publicly.
     r = req.post(f"{api}/repos/{repo}/releases", headers=headers, json={
         "tag_name": tag,
+        "target_commitish": "master",
         "name": "PMTiles data (auto-updated)",
+        "draft": False,
         "prerelease": True,
     })
     r.raise_for_status()
