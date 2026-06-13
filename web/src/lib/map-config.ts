@@ -28,14 +28,16 @@ export const SCORE_GRADIENT_LIGHT = [
   1.0,  "#801a00",
 ];
 
+// High-contrast on satellite imagery, but follows the universal "red = worse,
+// green = better" intuition (the old ramp made the best score red).
 export const SCORE_GRADIENT_SATELLITE = [
   "interpolate", ["linear"], ["get", "score"],
   0,    "rgba(0,0,0,0)",
-  0.10, "rgba(0,242,255,0.6)",
-  0.35, "#00ccff",
-  0.60, "#00ff88",
-  0.80, "#ffff00",
-  1.0,  "#ff3300",
+  0.12, "rgba(255,51,0,0.55)",
+  0.35, "#ff7a00",
+  0.58, "#ffd400",
+  0.80, "#9be000",
+  1.0,  "#00e676",
 ];
 
 // Rebuild a score gradient with a custom numeric input expression (used by
@@ -57,7 +59,7 @@ export function gradientWithInput(
 export const LEGEND_GRADIENT_CSS: Record<string, string> = {
   tmava:   "linear-gradient(to right, #1a3a3a, #1d7c48, #52b146, #d2e022, #fcd230)",
   svetla:  "linear-gradient(to right, #fff5cc, #ffd27f, #ff9540, #e65a28, #801a00)",
-  satelit: "linear-gradient(to right, #00ccff, #00ff88, #ffff00, #ff3300)",
+  satelit: "linear-gradient(to right, #ff3300, #ff7a00, #ffd400, #9be000, #00e676)",
 };
 
 // ── Opacities ─────────────────────────────────────────────────────────────────
