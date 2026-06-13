@@ -40,6 +40,10 @@ export default function NavBar({ floating = false }: Props) {
         {t("map")}
       </Link>
 
+      <Link href={`/${locale}/report`} className={linkCls(`/${locale}/report`)}>
+        {t("report")}
+      </Link>
+
       {/* Hide on very small screens */}
       <Link
         href={`/${locale}/methodology`}

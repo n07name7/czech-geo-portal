@@ -25,7 +25,8 @@
   },
   "nav": {
     "map": "Map",
-    "methodology": "Methodology"
+    "methodology": "Methodology",
+    "report": "Report"
   },
   "landing": {
     "headline": "Where in Czechia?",
@@ -52,5 +53,17 @@
     "svetla": "Light",
     "tmava": "Dark",
     "satelit": "Satellite"
+  },
+  "report": {
+    "title": "Address report",
+    "subtitle": "Enter an address to get a quality overview of the surroundings — schools, quiet, safety, transport and more.",
+    "placeholder": "Enter an address (street, city)…",
+    "hint": "Start by entering an address above.",
+    "loading": "Loading location data…",
+    "noData": "No data for this address yet (outside covered cities).",
+    "overall": "Overall score",
+    "pdfTitle": "Full PDF report",
+    "pdfDesc": "Detailed location analysis with all layers, comparison and sources.",
+    "pdfSoon": "Coming soon"
   }
 }

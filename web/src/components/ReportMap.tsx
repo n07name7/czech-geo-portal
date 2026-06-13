@@ -1,0 +1,111 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+import maplibregl from "maplibre-gl";
+import { Protocol } from "pmtiles";
+import "maplibre-gl/dist/maplibre-gl.css";
+
+import { LAYERS, COMBINED_URL } from "@/lib/layers";
+import { BASEMAPS } from "@/lib/basemaps";
+import { FILL_OPACITY, gradientWithInput } from "@/lib/map-config";
+
+const EQUAL_BLEND = (() => {
+  const sum: unknown[] = ["+"];
+  for (const l of LAYERS) sum.push(["coalesce", ["get", l.id], 0]);
+  return ["/", sum, LAYERS.length];
+})();
+
+function ringCentroid(ring: number[][]): [number, number] {
+  const n = ring.length - 1;
+  let x = 0, y = 0;
+  for (let i = 0; i < n; i++) { x += ring[i][0]; y += ring[i][1]; }
+  return [x / n, y / n];
+}
+
+interface Props {
+  lat: number;
+  lon: number;
+  onScores: (scores: Record<string, number> | null) => void;
+}
+
+export default function ReportMap({ lat, lon, onScores }: Props) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<maplibregl.Map | null>(null);
+  const markerRef = useRef<maplibregl.Marker | null>(null);
+  const onScoresRef = useRef(onScores);
+  useEffect(() => { onScoresRef.current = onScores; }, [onScores]);
+
+  useEffect(() => {
+    const protocol = new Protocol();
+    maplibregl.addProtocol("pmtiles", protocol.tile);
+    return () => maplibregl.removeProtocol("pmtiles");
+  }, []);
+
+  // init once
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
+    const dark = BASEMAPS.find((b) => b.id === "tmava")?.style as string;
+    const map = new maplibregl.Map({
+      container: containerRef.current,
+      style: dark,
+      center: [lon, lat],
+      zoom: 14,
+      maxZoom: 18,
+      attributionControl: false,
+    });
+    map.addControl(new maplibregl.NavigationControl(), "top-right");
+    mapRef.current = map;
+
+    map.on("load", () => {
+      map.addSource("combined", { type: "vector", url: `pmtiles://${COMBINED_URL}` });
+      map.addLayer({
+        id: "combined-fill",
+        type: "fill",
+        source: "combined",
+        "source-layer": "cells",
+        paint: {
+          "fill-color": gradientWithInput("tmava", EQUAL_BLEND) as maplibregl.ExpressionSpecification,
+          "fill-opacity": FILL_OPACITY * 0.85,
+          "fill-antialias": false,
+        },
+      });
+    });
+
+    markerRef.current = new maplibregl.Marker({ color: "#e8a030" })
+      .setLngLat([lon, lat])
+      .addTo(map);
+
+    const readScores = () => {
+      const raw = map.querySourceFeatures("combined", { sourceLayer: "cells" });
+      let best: (typeof raw)[number] | null = null;
+      let bestDist = Infinity;
+      const cosLat = Math.cos(lat * Math.PI / 180);
+      for (const f of raw) {
+        if (f.geometry?.type !== "Polygon") continue;
+        const [flng, flat] = ringCentroid((f.geometry as GeoJSON.Polygon).coordinates[0]);
+        const d = Math.hypot((flng - lon) * cosLat, flat - lat);
+        if (d < bestDist) { bestDist = d; best = f; }
+      }
+      if (!best || bestDist > 0.004) { onScoresRef.current(null); return; }
+      const props = best.properties ?? {};
+      const scores: Record<string, number> = {};
+      for (const l of LAYERS) scores[l.id] = Number(props[l.id]) || 0;
+      onScoresRef.current(scores);
+    };
+
+    map.on("idle", readScores);
+
+    return () => { map.remove(); mapRef.current = null; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // move to a new address
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    markerRef.current?.setLngLat([lon, lat]);
+    map.flyTo({ center: [lon, lat], zoom: 14, duration: 800 });
+  }, [lat, lon]);
+
+  return <div ref={containerRef} className="w-full h-full" />;
+}

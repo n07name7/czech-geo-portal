@@ -25,7 +25,8 @@
   },
   "nav": {
     "map": "Mapa",
-    "methodology": "Metodologie"
+    "methodology": "Metodologie",
+    "report": "Report"
   },
   "landing": {
     "headline": "Kam v Česku?",
@@ -52,5 +53,17 @@
     "svetla": "Světlá",
     "tmava": "Tmavá",
     "satelit": "Satelit"
+  },
+  "report": {
+    "title": "Report podle adresy",
+    "subtitle": "Zadejte adresu a získejte přehled kvality okolí — školy, klid, bezpečnost, doprava a další.",
+    "placeholder": "Zadejte adresu (ulice, město)…",
+    "hint": "Začněte zadáním adresy výše.",
+    "loading": "Načítání dat o lokalitě…",
+    "noData": "Pro tuto adresu zatím nemáme data (mimo pokrytá města).",
+    "overall": "Celkové skóre",
+    "pdfTitle": "Kompletní PDF report",
+    "pdfDesc": "Detailní rozbor lokality se všemi vrstvami, srovnáním a zdroji.",
+    "pdfSoon": "Brzy k dispozici"
   }
 }
