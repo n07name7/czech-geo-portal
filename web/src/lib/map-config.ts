@@ -38,43 +38,6 @@ export const SCORE_GRADIENT_SATELLITE = [
   1.0,  "#ff3300",
 ];
 
-// ── Heatmap colours (для zoom < 11, density → colour) ────────────────────────
-
-export const HEATMAP_COLOR_DARK = [
-  "interpolate", ["linear"], ["heatmap-density"],
-  0,    "rgba(0,0,0,0)",
-  0.10, "rgba(29, 124, 72, 0.5)",
-  0.30, "#1d7c48",
-  0.55, "#52b146",
-  0.80, "#d2e022",
-  1.0,  "#fcd230",
-];
-
-export const HEATMAP_COLOR_LIGHT = [
-  "interpolate", ["linear"], ["heatmap-density"],
-  0,    "rgba(255,255,255,0)",
-  0.15, "#ffd27f",
-  0.40, "#ff9540",
-  0.65, "#e65a28",
-  0.85, "#b32400",
-  1.0,  "#801a00",
-];
-
-export const HEATMAP_COLOR_SATELLITE = [
-  "interpolate", ["linear"], ["heatmap-density"],
-  0,    "rgba(0,0,0,0)",
-  0.15, "#00ccff",
-  0.40, "#00ff88",
-  0.70, "#ffff00",
-  1.0,  "#ff3300",
-];
-
-export function getHeatmapColor(basemapId: string): unknown[] {
-  if (basemapId === "svetla")  return HEATMAP_COLOR_LIGHT;
-  if (basemapId === "satelit") return HEATMAP_COLOR_SATELLITE;
-  return HEATMAP_COLOR_DARK;
-}
-
 // ── Legend CSS gradients ──────────────────────────────────────────────────────
 
 export const LEGEND_GRADIENT_CSS: Record<string, string> = {
