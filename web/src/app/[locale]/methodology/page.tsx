@@ -2,15 +2,15 @@ import { useTranslations } from "next-intl";
 import NavBar from "@/components/NavBar";
 
 const DATA_SOURCES = [
-  { layer: "Základní školy", source: "OSM Overpass", freq: "Týdně" },
-  { layer: "Mateřské školy", source: "OSM Overpass", freq: "Týdně" },
-  { layer: "Dětská hřiště", source: "OSM Overpass", freq: "Týdně" },
-  { layer: "Lékaři / kliniky", source: "OSM Overpass", freq: "Týdně" },
-  { layer: "Lékárny", source: "OSM Overpass", freq: "Týdně" },
-  { layer: "Zastávky MHD", source: "OSM Overpass", freq: "Týdně" },
-  { layer: "Parky", source: "OSM Overpass", freq: "Týdně" },
-  { layer: "Sportoviště", source: "OSM Overpass", freq: "Týdně" },
-  { layer: "Obchody s potravinami", source: "OSM Overpass", freq: "Týdně" },
+  { layer: "Základní školy", source: "Rejstřík škol MŠMT + RÚIAN (ČÚZK)", freq: "Týdně" },
+  { layer: "Mateřské školy", source: "Rejstřík škol MŠMT + RÚIAN (ČÚZK)", freq: "Týdně" },
+  { layer: "Dětská hřiště", source: "OpenStreetMap (ODbL)", freq: "Týdně" },
+  { layer: "Lékaři / kliniky", source: "NRPZS / ÚZIS ČR (CC BY 4.0)", freq: "Týdně" },
+  { layer: "Lékárny", source: "NRPZS / ÚZIS ČR (CC BY 4.0)", freq: "Týdně" },
+  { layer: "Zastávky MHD", source: "OpenStreetMap (ODbL)", freq: "Týdně" },
+  { layer: "Parky", source: "OpenStreetMap (ODbL)", freq: "Týdně" },
+  { layer: "Sportoviště", source: "OpenStreetMap (ODbL)", freq: "Týdně" },
+  { layer: "Obchody s potravinami", source: "OpenStreetMap (ODbL)", freq: "Týdně" },
 ];
 
 const SCORING_STEPS = [
