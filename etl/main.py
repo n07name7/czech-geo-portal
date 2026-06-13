@@ -238,8 +238,9 @@ def main(dry_run: bool = False, only_city: str | None = None) -> None:
             print("\nBackfilling skipped layers from previous release...")
             backfill_missing_from_release(failed_layers)
         print("\nUploading to GitHub Releases...")
-        files = [OUTPUT_DIR / f"{l['name']}.pmtiles" for l in LAYERS
-                 if (OUTPUT_DIR / f"{l['name']}.pmtiles").exists()]
+        names = [l["name"] for l in LAYERS] + ["combined"]
+        files = [OUTPUT_DIR / f"{n}.pmtiles" for n in names
+                 if (OUTPUT_DIR / f"{n}.pmtiles").exists()]
         upload_to_github_release(files)
         print("Upload complete.")
 
