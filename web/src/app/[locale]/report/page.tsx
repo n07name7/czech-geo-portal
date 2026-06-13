@@ -119,12 +119,13 @@ export default function ReportPage() {
     return vals.reduce((a, b) => a + b, 0) / vals.length;
   }, [scores]);
 
-  // Concrete metric per layer: object count within 800 m, dB for noise,
-  // incidents/year for safety — far more informative than the 0–100 score.
+  // Concrete metric per layer. The 800 m radius is stated once above the
+  // list, so rows stay compact: bare count for POIs, dB for noise,
+  // incidents/year for safety.
   const metricText = (id: string, n: number): string => {
     if (id === "quiet") return n > 0 ? `${n} dB` : t("report.quietZone");
     if (id === "safety") return `${n} ${t("report.incidents")}`;
-    return `${n} ${t("report.within800")}`;
+    return `${n}`;
   };
 
   const ranked = useMemo(() => {
@@ -211,6 +212,9 @@ export default function ReportPage() {
                   </div>
 
                   {/* Per-category rows: concrete number + score bar */}
+                  <p className="text-[10px] font-body text-[var(--text-faint)] mb-2">
+                    {t("report.radiusNote")}
+                  </p>
                   <div className="space-y-2.5 mb-6">
                     {ranked.map((r) => (
                       <div key={r.id} className="flex items-center gap-3">
