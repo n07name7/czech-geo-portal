@@ -22,7 +22,7 @@ from src.fetch.noise import fetch_noise_polygons
 from src.fetch.crime import fetch_crime_points
 from src.score.h3_scorer import get_city_cells, score_cells
 from src.score.noise_scorer import score_cells_quiet
-from src.build.pmtiles import build_pmtiles
+from src.build.pmtiles import build_pmtiles, build_combined_pmtiles
 
 OUTPUT_DIR = Path("output/cities")
 RESOLUTION = 10
@@ -182,6 +182,8 @@ def main(dry_run: bool = False, only_city: str | None = None) -> None:
     print(f"Running ETL for: {[c['name'] for c in cities]}\n")
 
     failed_layers: list[str] = []
+    # cell -> {layer_name: score} accumulated across layers for the combined file
+    combined: dict[str, dict[str, float]] = {}
     for layer in LAYERS:
         layer_name = layer["name"]
         all_scores: dict[str, float] = {}
@@ -212,9 +214,19 @@ def main(dry_run: bool = False, only_city: str | None = None) -> None:
             failed_layers.append(layer_name)
             continue
 
+        for cell, score in all_scores.items():
+            combined.setdefault(cell, {})[layer_name] = score
+
         out = OUTPUT_DIR / f"{layer_name}.pmtiles"
         print(f"[{layer_name}] building PMTiles ({len(all_scores)} cells) -> {out}")
         build_pmtiles(all_scores, out)
+        print(f"  {out.stat().st_size // 1024} KB\n")
+
+    # Combined dataset for the weighted "match" mode (every layer score per cell)
+    if combined:
+        out = OUTPUT_DIR / "combined.pmtiles"
+        print(f"[combined] building PMTiles ({len(combined)} cells) -> {out}")
+        build_combined_pmtiles(combined, out)
         print(f"  {out.stat().st_size // 1024} KB\n")
 
     if failed_layers:

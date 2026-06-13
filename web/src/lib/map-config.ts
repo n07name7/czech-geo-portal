@@ -38,6 +38,20 @@ export const SCORE_GRADIENT_SATELLITE = [
   1.0,  "#ff3300",
 ];
 
+// Rebuild a score gradient with a custom numeric input expression (used by
+// the match mode, where the input is a weighted blend, not ["get","score"]).
+export function gradientWithInput(
+  basemapId: string,
+  inputExpr: unknown,
+): unknown[] {
+  const base =
+    basemapId === "svetla" ? SCORE_GRADIENT_LIGHT
+    : basemapId === "satelit" ? SCORE_GRADIENT_SATELLITE
+    : SCORE_GRADIENT;
+  // base = ["interpolate", ["linear"], ["get","score"], ...stops]
+  return ["interpolate", ["linear"], inputExpr, ...base.slice(3)];
+}
+
 // ── Legend CSS gradients ──────────────────────────────────────────────────────
 
 export const LEGEND_GRADIENT_CSS: Record<string, string> = {

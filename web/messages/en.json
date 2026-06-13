@@ -1,7 +1,10 @@
 {
   "ui": {
     "city": "City",
-    "layers": "Layers"
+    "layers": "Layers",
+    "match": "Match me",
+    "matchHint": "Set what matters and find the best neighborhood for you.",
+    "reset": "Reset"
   },
   "legend": {
     "low": "less",

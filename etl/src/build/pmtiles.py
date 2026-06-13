@@ -57,6 +57,42 @@ def cells_to_geojson(scores: dict[str, float]) -> dict:
     return {"type": "FeatureCollection", "features": features}
 
 
+def aggregate_props_to_parent(
+    cell_props: dict[str, dict[str, float]],
+    parent_res: int,
+) -> dict[str, dict[str, float]]:
+    """Mean of each layer score per parent cell."""
+    sums: dict[str, dict[str, float]] = {}
+    counts: dict[str, int] = {}
+    for cell_id, props in cell_props.items():
+        parent = h3.cell_to_parent(cell_id, parent_res)
+        acc = sums.setdefault(parent, {})
+        for layer, score in props.items():
+            acc[layer] = acc.get(layer, 0.0) + score
+        counts[parent] = counts.get(parent, 0) + 1
+    return {
+        p: {layer: total / counts[p] for layer, total in acc.items()}
+        for p, acc in sums.items()
+    }
+
+
+def combined_to_geojson(cell_props: dict[str, dict[str, float]]) -> dict:
+    """One feature per cell carrying every layer score as a property."""
+    features = []
+    for cell_id, props in cell_props.items():
+        boundary = h3.cell_to_boundary(cell_id)
+        coords = [[lon, lat] for lat, lon in boundary]
+        coords.append(coords[0])
+        properties = {"cell": cell_id}
+        properties.update({layer: round(score, 3) for layer, score in props.items()})
+        features.append({
+            "type": "Feature",
+            "geometry": {"type": "Polygon", "coordinates": [coords]},
+            "properties": properties,
+        })
+    return {"type": "FeatureCollection", "features": features}
+
+
 def _run(cmd: list[str]) -> None:
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
@@ -79,6 +115,54 @@ def build_pmtiles(scores: dict[str, float], output_path: Path, layer_name: str =
             geojson_path = tmp / f"res{res}.geojson"
             with open(geojson_path, "w") as f:
                 json.dump(cells_to_geojson(level), f)
+
+            band_path = tmp / f"res{res}.mbtiles"
+            _run([
+                "tippecanoe",
+                "-o", str(band_path),
+                "--force",
+                "-Z", str(minzoom),
+                "-z", str(maxzoom),
+                "-l", layer_name,
+                "--no-tiny-polygon-reduction",
+                "--detect-shared-borders",
+                str(geojson_path),
+            ])
+            band_files.append(str(band_path))
+
+        _run([
+            "tile-join",
+            "-o", str(output_path),
+            "--force",
+            "--no-tile-compression",
+            *band_files,
+        ])
+
+    return output_path
+
+
+def build_combined_pmtiles(
+    cell_props: dict[str, dict[str, float]],
+    output_path: Path,
+    layer_name: str = "cells",
+) -> Path:
+    """Multi-resolution PMTiles where each cell carries all layer scores.
+
+    Drives the client-side "match by weights" mode: MapLibre computes the
+    weighted blend from feature properties, so weights update instantly
+    with no refetch.
+    """
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp = Path(tmpdir)
+        band_files: list[str] = []
+
+        for res, minzoom, maxzoom, agg in RES_ZOOM_BANDS:
+            level = cell_props if agg == "base" else aggregate_props_to_parent(cell_props, res)
+            geojson_path = tmp / f"res{res}.geojson"
+            with open(geojson_path, "w") as f:
+                json.dump(combined_to_geojson(level), f)
 
             band_path = tmp / f"res{res}.mbtiles"
             _run([

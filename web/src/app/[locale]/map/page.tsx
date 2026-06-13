@@ -24,6 +24,10 @@ const MapView = dynamic(() => import("@/components/MapView"), {
   ),
 });
 
+const DEFAULT_WEIGHTS = Object.fromEntries(
+  LAYERS.map((l) => [l.id, 1]),
+) as Record<LayerId, number>;
+
 export default function MapPage() {
   const [activeLayer, setActiveLayer] = useState<LayerId>("schools");
   const [activeCity, setActiveCity] = useState<CityConfig>(DEFAULT_CITY);
@@ -32,6 +36,8 @@ export default function MapPage() {
     setCollapsed(window.innerWidth < 768);
   }, []);
   const [activeBasemap, setActiveBasemap] = useState<BasemapId>(DEFAULT_BASEMAP.id);
+  const [matchMode, setMatchMode] = useState(false);
+  const [weights, setWeights] = useState<Record<LayerId, number>>(DEFAULT_WEIGHTS);
   const t = useTranslations();
 
   const currentBasemapStyle =
@@ -45,6 +51,8 @@ export default function MapPage() {
         basemap={currentBasemapStyle}
         basemapId={activeBasemap}
         activeCity={activeCity}
+        matchMode={matchMode}
+        weights={weights}
       />
       <LayerPanel
         layers={LAYERS}
@@ -55,6 +63,11 @@ export default function MapPage() {
         onCityChange={setActiveCity}
         collapsed={collapsed}
         onToggle={() => setCollapsed((c) => !c)}
+        matchMode={matchMode}
+        onMatchModeChange={setMatchMode}
+        weights={weights}
+        onWeightChange={(id, w) => setWeights((prev) => ({ ...prev, [id]: w }))}
+        onResetWeights={() => setWeights(DEFAULT_WEIGHTS)}
       />
       <Legend
         labelLow={t("legend.low")}

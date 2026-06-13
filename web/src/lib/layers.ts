@@ -15,3 +15,7 @@ export const LAYERS: LayerConfig[] = [
   { id: "quiet",         labelKey: "layers.quiet",         pmtilesUrl: `${R2_BASE}/quiet.pmtiles` },
   { id: "safety",        labelKey: "layers.safety",        pmtilesUrl: `${R2_BASE}/safety.pmtiles` },
 ];
+
+// Combined dataset for match mode: one cell carries every layer's score as a
+// property keyed by layer id. The "cells" source-layer matches per-layer tiles.
+export const COMBINED_URL = `${R2_BASE}/combined.pmtiles`;

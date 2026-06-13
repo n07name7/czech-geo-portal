@@ -6,7 +6,7 @@ import { Protocol } from "pmtiles";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 import type { LayerId, BasemapId } from "@/types";
-import { LAYERS } from "@/lib/layers";
+import { LAYERS, COMBINED_URL } from "@/lib/layers";
 import { CITIES, type CityConfig } from "@/lib/cities";
 import {
   PRAGUE_CENTER,
@@ -17,6 +17,7 @@ import {
   FILL_OPACITY,
   FILL_OPACITY_LIGHT,
   FILL_OPACITY_SATELLITE,
+  gradientWithInput,
 } from "@/lib/map-config";
 
 interface Props {
@@ -24,6 +25,20 @@ interface Props {
   basemap: string | object;
   activeCity: CityConfig;
   basemapId: BasemapId;
+  matchMode: boolean;
+  weights: Record<LayerId, number>;
+}
+
+/** Weighted-blend expression over combined-tile properties → 0..1 */
+function blendExpr(weights: Record<LayerId, number>): unknown {
+  const active = LAYERS.filter((l) => (weights[l.id] ?? 0) > 0);
+  const total = active.reduce((s, l) => s + weights[l.id], 0);
+  if (total === 0) return 0;
+  const sum: unknown[] = ["+"];
+  for (const l of active) {
+    sum.push(["*", weights[l.id], ["coalesce", ["get", l.id], 0]]);
+  }
+  return ["/", sum, total];
 }
 
 function getGradientConfig(basemapId: BasemapId) {
@@ -108,6 +123,47 @@ function attachPmtilesLayers(
   }
 }
 
+// ── Combined match layer ────────────────────────────────────────────────────────
+
+function attachCombinedLayer(
+  map: maplibregl.Map,
+  basemapId: BasemapId,
+  weights: Record<LayerId, number>,
+  visible: boolean,
+) {
+  if (!map.getSource("combined")) {
+    map.addSource("combined", { type: "vector", url: `pmtiles://${COMBINED_URL}` });
+  }
+  const { opacity } = getGradientConfig(basemapId);
+  if (!map.getLayer("combined-fill")) {
+    map.addLayer({
+      id: "combined-fill",
+      type: "fill",
+      source: "combined",
+      "source-layer": "cells",
+      layout: { visibility: visible ? "visible" : "none" },
+      paint: {
+        "fill-color": gradientWithInput(basemapId, blendExpr(weights)) as maplibregl.ExpressionSpecification,
+        "fill-opacity": [
+          "interpolate", ["linear"], ["zoom"],
+          5, opacity * 0.72,
+          12, opacity,
+        ],
+        "fill-antialias": false,
+      },
+    });
+    map.addLayer({
+      id: "combined-highlight",
+      type: "line",
+      source: "combined",
+      "source-layer": "cells",
+      layout: { visibility: visible ? "visible" : "none" },
+      filter: ["==", ["get", "cell"], ""],
+      paint: { "line-color": "#ffffff", "line-width": 2 },
+    });
+  }
+}
+
 // ── City boundary layers ──────────────────────────────────────────────────────
 
 type BoundaryGeoJson = GeoJSON.FeatureCollection<GeoJSON.Polygon | GeoJSON.MultiPolygon>;
@@ -181,15 +237,18 @@ function attachAllLayers(
   activeLayer: LayerId,
   boundary: BoundaryGeoJson | null,
   basemapId: BasemapId,
+  matchMode: boolean,
+  weights: Record<LayerId, number>,
 ) {
   const { gradient, opacity } = getGradientConfig(basemapId);
   attachPmtilesLayers(map, activeLayer, gradient, opacity);
+  attachCombinedLayer(map, basemapId, weights, matchMode);
   if (boundary) attachBoundaryLayers(map, boundary);
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function MapView({ activeLayer, basemap, activeCity, basemapId }: Props) {
+export default function MapView({ activeLayer, basemap, activeCity, basemapId, matchMode, weights }: Props) {
   const containerRef   = useRef<HTMLDivElement>(null);
   const mapRef         = useRef<maplibregl.Map | null>(null);
   const popupRef       = useRef<maplibregl.Popup | null>(null);
@@ -198,11 +257,15 @@ export default function MapView({ activeLayer, basemap, activeCity, basemapId }:
   const basemapRef     = useRef(basemap);
   const basemapIdRef   = useRef(basemapId);
   const activeCityRef  = useRef(activeCity);
+  const matchModeRef   = useRef(matchMode);
+  const weightsRef     = useRef(weights);
   const boundaryRef    = useRef<BoundaryGeoJson | null>(null);
   const boundaryCache  = useRef<Record<string, BoundaryGeoJson>>({});
 
   useEffect(() => { activeLayerRef.current = activeLayer; }, [activeLayer]);
   useEffect(() => { basemapIdRef.current   = basemapId;   }, [basemapId]);
+  useEffect(() => { matchModeRef.current   = matchMode;   }, [matchMode]);
+  useEffect(() => { weightsRef.current     = weights;     }, [weights]);
 
   // PMTiles protocol
   useEffect(() => {
@@ -287,7 +350,7 @@ export default function MapView({ activeLayer, basemap, activeCity, basemapId }:
     popupRef.current = popup;
 
     map.on("load", () => {
-      attachAllLayers(map, activeLayerRef.current, boundaryRef.current, basemapIdRef.current);
+      attachAllLayers(map, activeLayerRef.current, boundaryRef.current, basemapIdRef.current, matchModeRef.current, weightsRef.current);
     });
 
     // Explicit colours — CSS variables may not resolve inside MapLibre popup container
@@ -318,8 +381,22 @@ export default function MapView({ activeLayer, basemap, activeCity, basemapId }:
       if (zoom >= 8)  return 0.022; // res 7,  Ø ~2.4 km
       return 0.06;                  // res 6,  Ø ~6.4 km
     };
+    // In match mode the weighted blend is computed here too (tiles carry
+    // per-layer scores, not a precomputed 'score').
+    const blendScore = (props: Record<string, unknown>): number => {
+      const w = weightsRef.current;
+      let sum = 0, total = 0;
+      for (const l of LAYERS) {
+        const wi = w[l.id] ?? 0;
+        if (wi <= 0) continue;
+        sum += wi * (Number(props[l.id]) || 0);
+        total += wi;
+      }
+      return total > 0 ? sum / total : 0;
+    };
+
     const tryShowHex = (lngLat: maplibregl.LngLat): boolean => {
-      const sourceId = activeLayerRef.current;
+      const sourceId = matchModeRef.current ? "combined" : activeLayerRef.current;
       if (!map.getSource(sourceId)) return false;
 
       const raw = map.querySourceFeatures(sourceId, { sourceLayer: "cells" });
@@ -334,8 +411,10 @@ export default function MapView({ activeLayer, basemap, activeCity, basemapId }:
       }
       if (!best || bestDist > hitRadiusDeg(map.getZoom())) return false;
 
-      const score = best.properties?.score ?? 0;
-      if (score <= 0) return false; // no popup for cells with zero accessibility
+      const score = matchModeRef.current
+        ? blendScore(best.properties ?? {})
+        : (best.properties?.score ?? 0);
+      if (score <= 0) return false; // no popup for cells with zero score
 
       const h3index = best.properties?.cell ?? String(best.id);
       if (!h3index) return false;
@@ -394,18 +473,18 @@ export default function MapView({ activeLayer, basemap, activeCity, basemapId }:
     if (!map || basemap === basemapRef.current) return;
     basemapRef.current = basemap;
     map.once("style.load", () => {
-      attachAllLayers(map, activeLayerRef.current, boundaryRef.current, basemapIdRef.current);
+      attachAllLayers(map, activeLayerRef.current, boundaryRef.current, basemapIdRef.current, matchModeRef.current, weightsRef.current);
     });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     map.setStyle(basemap as any);
   }, [basemap]);
 
-  // Layer visibility
+  // Layer visibility (single-layer vs match mode)
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
     for (const layer of LAYERS) {
-      const vis = layer.id === activeLayer ? "visible" : "none";
+      const vis = !matchMode && layer.id === activeLayer ? "visible" : "none";
       if (map.getLayer(`${layer.id}-fill`)) {
         map.setLayoutProperty(`${layer.id}-fill`, "visibility", vis);
       }
@@ -413,7 +492,25 @@ export default function MapView({ activeLayer, basemap, activeCity, basemapId }:
         map.setLayoutProperty(`${layer.id}-highlight`, "visibility", vis);
       }
     }
-  }, [activeLayer]);
+    const matchVis = matchMode ? "visible" : "none";
+    if (map.getLayer("combined-fill")) {
+      map.setLayoutProperty("combined-fill", "visibility", matchVis);
+    }
+    if (map.getLayer("combined-highlight")) {
+      map.setLayoutProperty("combined-highlight", "visibility", matchVis);
+    }
+  }, [activeLayer, matchMode]);
+
+  // Recompute the weighted blend when sliders move — instant, no refetch
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded() || !map.getLayer("combined-fill")) return;
+    map.setPaintProperty(
+      "combined-fill",
+      "fill-color",
+      gradientWithInput(basemapIdRef.current, blendExpr(weights)) as maplibregl.ExpressionSpecification,
+    );
+  }, [weights]);
 
   return <div ref={containerRef} className="w-full h-full" />;
 }

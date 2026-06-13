@@ -1,7 +1,10 @@
 {
   "ui": {
     "city": "Město",
-    "layers": "Vrstvy"
+    "layers": "Vrstvy",
+    "match": "Podle mě",
+    "matchHint": "Nastavte důležitost a najděte nejlepší čtvrť pro vás.",
+    "reset": "Resetovat"
   },
   "legend": {
     "low": "méně",
