@@ -13,6 +13,7 @@ import os
 import sys
 from pathlib import Path
 
+import src.net  # noqa: F401  — force IPv4 (GitHub runners lack IPv6)
 from src.fetch.osm import fetch_osm_pois
 from src.fetch.msmt import fetch_msmt_pois
 from src.fetch.nrpzs import fetch_nrpzs_pois
@@ -97,6 +98,29 @@ LAYERS: list[dict] = [
 ]
 
 
+def backfill_missing_from_release(layer_names: list[str], tag: str = "data-latest") -> None:
+    """Download last good PMTiles for layers that produced nothing this run.
+
+    On a fresh CI checkout the local file is gone, so a skipped layer would
+    vanish from the recreated release. Pull its previous asset first.
+    """
+    import requests as req
+    repo = os.environ.get("GITHUB_REPOSITORY", "n07name7/czech-geo-portal")
+    base = f"https://github.com/{repo}/releases/download/{tag}"
+    for name in layer_names:
+        dest = OUTPUT_DIR / f"{name}.pmtiles"
+        try:
+            r = req.get(f"{base}/{name}.pmtiles", timeout=600)
+            if r.status_code == 200 and r.content:
+                dest.write_bytes(r.content)
+                print(f"  backfilled {name}.pmtiles from previous release "
+                      f"({len(r.content)//1024} KB)")
+            else:
+                print(f"  no previous {name}.pmtiles to backfill (HTTP {r.status_code})")
+        except req.RequestException as e:
+            print(f"  backfill {name} failed: {e}")
+
+
 def upload_to_github_release(files: list[Path], tag: str = "data-latest") -> None:
     import requests as req
     token = os.environ["GITHUB_TOKEN"]
@@ -142,6 +166,7 @@ def main(dry_run: bool = False, only_city: str | None = None) -> None:
 
     print(f"Running ETL for: {[c['name'] for c in cities]}\n")
 
+    failed_layers: list[str] = []
     for layer in LAYERS:
         layer_name = layer["name"]
         all_scores: dict[str, float] = {}
@@ -165,14 +190,26 @@ def main(dry_run: bool = False, only_city: str | None = None) -> None:
             all_scores.update(scores)
             print(f"  {len(cells)} cells scored")
 
+        # A source outage must not wipe a layer: skip the build and keep
+        # the previous release file rather than overwriting with nothing.
+        if not all_scores:
+            print(f"[{layer_name}] no data fetched — keeping previous file, SKIP\n")
+            failed_layers.append(layer_name)
+            continue
+
         out = OUTPUT_DIR / f"{layer_name}.pmtiles"
         print(f"[{layer_name}] building PMTiles ({len(all_scores)} cells) -> {out}")
         build_pmtiles(all_scores, out)
         print(f"  {out.stat().st_size // 1024} KB\n")
 
+    if failed_layers:
+        print(f"WARNING: layers with no data this run: {failed_layers}")
     print("All layers done.")
 
     if not dry_run:
+        if failed_layers:
+            print("\nBackfilling skipped layers from previous release...")
+            backfill_missing_from_release(failed_layers)
         print("\nUploading to GitHub Releases...")
         files = [OUTPUT_DIR / f"{l['name']}.pmtiles" for l in LAYERS
                  if (OUTPUT_DIR / f"{l['name']}.pmtiles").exists()]
