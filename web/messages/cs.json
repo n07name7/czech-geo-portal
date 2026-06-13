@@ -7,8 +7,9 @@
     "reset": "Resetovat"
   },
   "legend": {
-    "low": "méně",
-    "high": "více"
+    "low": "horší",
+    "high": "lepší",
+    "rating": "hodnocení lokality"
   },
   "layers": {
     "schools": "Základní školy",

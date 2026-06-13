@@ -27,6 +27,10 @@ interface Props {
   basemapId: BasemapId;
   matchMode: boolean;
   weights: Record<LayerId, number>;
+  /** What the popup measures — active layer name, or "match" label in match mode */
+  measureLabel: string;
+  /** Word under the score, e.g. "rating" */
+  ratingLabel: string;
 }
 
 /** Weighted-blend expression over combined-tile properties → 0..1 */
@@ -248,7 +252,7 @@ function attachAllLayers(
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function MapView({ activeLayer, basemap, activeCity, basemapId, matchMode, weights }: Props) {
+export default function MapView({ activeLayer, basemap, activeCity, basemapId, matchMode, weights, measureLabel, ratingLabel }: Props) {
   const containerRef   = useRef<HTMLDivElement>(null);
   const mapRef         = useRef<maplibregl.Map | null>(null);
   const popupRef       = useRef<maplibregl.Popup | null>(null);
@@ -259,6 +263,8 @@ export default function MapView({ activeLayer, basemap, activeCity, basemapId, m
   const activeCityRef  = useRef(activeCity);
   const matchModeRef   = useRef(matchMode);
   const weightsRef     = useRef(weights);
+  const measureLabelRef = useRef(measureLabel);
+  const ratingLabelRef  = useRef(ratingLabel);
   const boundaryRef    = useRef<BoundaryGeoJson | null>(null);
   const boundaryCache  = useRef<Record<string, BoundaryGeoJson>>({});
 
@@ -266,6 +272,8 @@ export default function MapView({ activeLayer, basemap, activeCity, basemapId, m
   useEffect(() => { basemapIdRef.current   = basemapId;   }, [basemapId]);
   useEffect(() => { matchModeRef.current   = matchMode;   }, [matchMode]);
   useEffect(() => { weightsRef.current     = weights;     }, [weights]);
+  useEffect(() => { measureLabelRef.current = measureLabel; }, [measureLabel]);
+  useEffect(() => { ratingLabelRef.current  = ratingLabel;  }, [ratingLabel]);
 
   // PMTiles protocol
   useEffect(() => {
@@ -353,12 +361,23 @@ export default function MapView({ activeLayer, basemap, activeCity, basemapId, m
       attachAllLayers(map, activeLayerRef.current, boundaryRef.current, basemapIdRef.current, matchModeRef.current, weightsRef.current);
     });
 
-    // Explicit colours — CSS variables may not resolve inside MapLibre popup container
-    const popupHtml = (score: number) =>
-      `<div style="padding:12px 16px;min-width:110px;background:#0f1117;border-radius:2px;box-shadow:0 4px 20px rgba(0,0,0,.6)">` +
-      `<div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#7a8a9a;margin-bottom:6px">Dostupnost</div>` +
-      `<div style="font-size:26px;font-weight:700;color:#4caf86;line-height:1">${(score * 100).toFixed(0)}<span style="font-size:14px;margin-left:3px;color:#7a8a9a">%</span></div>` +
-      `</div>`;
+    // Explicit colours — CSS variables may not resolve inside MapLibre popup container.
+    // Title = what is being measured (active layer name, or "match" in match mode);
+    // rating word makes "73 %" read as a quality rating, not generic "accessibility".
+    const escapeHtml = (s: string) =>
+      s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
+    const popupHtml = (score: number) => {
+      const pct = (score * 100).toFixed(0);
+      const title = escapeHtml(measureLabelRef.current);
+      const rating = escapeHtml(ratingLabelRef.current);
+      return (
+        `<div style="padding:12px 16px;min-width:120px;background:#0f1117;border-radius:2px;box-shadow:0 4px 20px rgba(0,0,0,.6)">` +
+        `<div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#e8a030;margin-bottom:6px">${title}</div>` +
+        `<div style="font-size:26px;font-weight:700;color:#4caf86;line-height:1">${pct}<span style="font-size:14px;margin-left:3px;color:#7a8a9a">/ 100</span></div>` +
+        `<div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#7a8a9a;margin-top:6px">${rating}</div>` +
+        `</div>`
+      );
+    };
 
     const clearHover = () => {
       if (hoveredHexRef.current) {

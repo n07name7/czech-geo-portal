@@ -53,6 +53,8 @@ export default function MapPage() {
         activeCity={activeCity}
         matchMode={matchMode}
         weights={weights}
+        measureLabel={matchMode ? t("ui.match") : t(`layers.${activeLayer}`)}
+        ratingLabel={t("legend.rating")}
       />
       <LayerPanel
         layers={LAYERS}

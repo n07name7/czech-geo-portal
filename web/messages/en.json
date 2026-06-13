@@ -7,8 +7,9 @@
     "reset": "Reset"
   },
   "legend": {
-    "low": "less",
-    "high": "more"
+    "low": "worse",
+    "high": "better",
+    "rating": "location rating"
   },
   "layers": {
     "schools": "Primary schools",
