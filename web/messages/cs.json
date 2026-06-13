@@ -49,7 +49,7 @@
     "scoringTitle": "Jak se počítá skóre",
     "scoringText": "Město dělíme na hexagonální buňky H3 (~150×150 m). U většiny vrstev počítáme počet objektů v okruhu 800 m od středu buňky (≈10 minut chůze). Klid odvozujeme ze strategických hlukových map (méně hluku = vyšší skóre) a bezpečnost z hustoty kriminality (méně případů = vyšší skóre). Výsledek normalizujeme na škálu 0–1 v rámci daného města — skóre 1 znamená nejlepší hodnotu ve městě, 0 nejhorší.",
     "matchTitle": "Podle mě — vlastní váhy",
-    "matchText": "V režimu „Podle mě\" si u každého kritéria nastavíte důležitost. Mapa spočítá vážený průměr skóre všech vrstev a obarví čtvrti podle toho, jak sedí právě vašim prioritám — okamžitě, přímo v prohlížeči, bez serveru."
+    "matchText": "V režimu „Podle mě\" si u každého kritéria nastavíte důležitost. Mapa spočítá vážený průměr skóre všech vrstev a okamžitě obarví čtvrti podle toho, jak sedí právě vašim prioritám. Posouvejte posuvníky a sledujte, jak se nejlepší čtvrti mění v reálném čase."
   },
   "basemap": {
     "svetla": "Světlá",

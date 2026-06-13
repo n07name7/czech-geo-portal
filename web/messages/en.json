@@ -49,7 +49,7 @@
     "scoringTitle": "How the score is calculated",
     "scoringText": "We split the city into H3 hex cells (~150×150 m). For most layers we count objects within 800 m of the cell center (≈10 min walk). Quiet is derived from strategic noise maps (less noise = higher score) and safety from crime density (fewer incidents = higher score). Scores are normalized 0–1 within each city — 1 is the best value in the city, 0 the worst.",
     "matchTitle": "Match me — your own weights",
-    "matchText": "In “Match me” mode you set how important each criterion is. The map computes a weighted average of all layer scores and colors neighborhoods by how well they fit your priorities — instantly, in the browser, with no server."
+    "matchText": "In “Match me” mode you set how important each criterion is. The map computes a weighted average of all layer scores and instantly colors neighborhoods by how well they fit your priorities. Move the sliders and watch the best-fitting areas update in real time."
   },
   "basemap": {
     "svetla": "Light",
