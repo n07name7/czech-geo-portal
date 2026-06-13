@@ -18,10 +18,10 @@ RES_ZOOM_BANDS: list[tuple[int, int, int, str]] = [
     # Coarse zooms are locators — "max" keeps hotspots visible; "mean" on a
     # 6 km cell with one strong centre and empty outskirts is near-invisible.
     (6,  5,  7, "max"),
-    (7,  8,  9, "max"),
-    (8, 10, 11, "mean"),
-    (9, 12, 12, "mean"),
-    (10, 13, 14, "base"),
+    (7,  8,  8, "max"),
+    (8,  9, 10, "mean"),
+    (9, 11, 11, "mean"),
+    (10, 12, 14, "base"),
 ]
 
 BASE_RES = 10

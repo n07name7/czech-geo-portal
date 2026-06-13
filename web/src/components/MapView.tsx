@@ -312,9 +312,9 @@ export default function MapView({ activeLayer, basemap, activeCity, basemapId }:
     // the rendering pipeline hasn't settled; querySourceFeatures is always reliable.
     // Hit radius follows the hex resolution rendered at the current zoom band.
     const hitRadiusDeg = (zoom: number): number => {
-      if (zoom >= 13) return 0.003; // res 10, Ø ~150 m
-      if (zoom >= 12) return 0.004; // res 9,  Ø ~350 m
-      if (zoom >= 10) return 0.009; // res 8,  Ø ~920 m
+      if (zoom >= 12) return 0.003; // res 10, Ø ~150 m
+      if (zoom >= 11) return 0.004; // res 9,  Ø ~350 m
+      if (zoom >= 9)  return 0.009; // res 8,  Ø ~920 m
       if (zoom >= 8)  return 0.022; // res 7,  Ø ~2.4 km
       return 0.06;                  // res 6,  Ø ~6.4 km
     };
