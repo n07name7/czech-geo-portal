@@ -28,16 +28,18 @@ export const SCORE_GRADIENT_LIGHT = [
   1.0,  "#801a00",
 ];
 
-// High-contrast on satellite imagery, but follows the universal "red = worse,
-// green = better" intuition (the old ramp made the best score red).
+// Satellite imagery is dominated by greens and yellows, so a green/yellow
+// ramp blends in. This ramp stays in red↔cyan space (colors absent from
+// nature) for contrast, while keeping the intuition red = worse → cyan =
+// better; the strong "bad" signal (red) is what users scan for.
 export const SCORE_GRADIENT_SATELLITE = [
   "interpolate", ["linear"], ["get", "score"],
   0,    "rgba(0,0,0,0)",
-  0.12, "rgba(255,51,0,0.55)",
-  0.35, "#ff7a00",
-  0.58, "#ffd400",
-  0.80, "#9be000",
-  1.0,  "#00e676",
+  0.12, "rgba(255,40,90,0.55)",
+  0.35, "#ff2d6e",
+  0.58, "#c44dff",
+  0.80, "#4d7cff",
+  1.0,  "#00e5ff",
 ];
 
 // Rebuild a score gradient with a custom numeric input expression (used by
@@ -59,7 +61,7 @@ export function gradientWithInput(
 export const LEGEND_GRADIENT_CSS: Record<string, string> = {
   tmava:   "linear-gradient(to right, #1a3a3a, #1d7c48, #52b146, #d2e022, #fcd230)",
   svetla:  "linear-gradient(to right, #fff5cc, #ffd27f, #ff9540, #e65a28, #801a00)",
-  satelit: "linear-gradient(to right, #ff3300, #ff7a00, #ffd400, #9be000, #00e676)",
+  satelit: "linear-gradient(to right, #ff2d6e, #c44dff, #4d7cff, #00e5ff)",
 };
 
 // ── Opacities ─────────────────────────────────────────────────────────────────
