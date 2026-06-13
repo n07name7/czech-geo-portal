@@ -75,6 +75,9 @@
     "pdfBuy": "Buy PDF for {price} CZK",
     "proHint": "Searching often? Try",
     "proLink": "Pro subscription",
-    "pdfSoon": "Coming soon"
+    "pdfSoon": "Coming soon",
+    "within800": "within 800 m",
+    "incidents": "incidents/yr",
+    "quietZone": "quiet zone"
   }
 }

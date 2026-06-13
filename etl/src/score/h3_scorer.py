@@ -5,7 +5,10 @@ import numpy as np
 from pyproj import Transformer
 from scipy.spatial import cKDTree
 
-_TRANSFORMER = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
+# S-JTSK (EPSG:5514) — the Czech national grid; distances are accurate to
+# <0.1% nationwide, so the 800 m radius and the object counts are real metres
+# (Web Mercator would shrink 800 m to ~510 m at Prague's latitude).
+_TRANSFORMER = Transformer.from_crs("EPSG:4326", "EPSG:5514", always_xy=True)
 
 RADIUS_M = 800  # ~10 minute walk
 
@@ -27,6 +30,20 @@ def _to_mercator(coords: list[tuple[float, float]]) -> np.ndarray:
     return np.column_stack([xs, ys])
 
 
+def count_cells(
+    pois: list[tuple[float, float]],
+    cell_ids: list[str],
+    radius_m: int = RADIUS_M,
+) -> dict[str, int]:
+    """Raw number of POIs within radius_m metres of each cell centre."""
+    if not pois or not cell_ids:
+        return {c: 0 for c in cell_ids}
+    centers = [h3.cell_to_latlng(c) for c in cell_ids]
+    tree = cKDTree(_to_mercator(pois))
+    counts = tree.query_ball_point(_to_mercator(centers), r=radius_m, return_length=True)
+    return dict(zip(cell_ids, (int(c) for c in counts)))
+
+
 def score_cells(
     pois: list[tuple[float, float]],
     cell_ids: list[str],
@@ -37,19 +54,10 @@ def score_cells(
     Returns {cell_id: normalized_score} where max score == 1.0.
     Score is normalised per-city (max within the provided cell_ids == 1.0).
     """
-    if not pois or not cell_ids:
-        return {c: 0.0 for c in cell_ids}
-
-    centers = [h3.cell_to_latlng(c) for c in cell_ids]
-    poi_xy = _to_mercator(pois)
-    cell_xy = _to_mercator(centers)
-
-    tree = cKDTree(poi_xy)
-    counts = tree.query_ball_point(cell_xy, r=radius_m, return_length=True)
-    counts = np.array(counts, dtype=float)
-
-    max_count = counts.max()
+    counts = count_cells(pois, cell_ids, radius_m)
+    if not counts:
+        return {}
+    max_count = max(counts.values())
     if max_count == 0:
         return {c: 0.0 for c in cell_ids}
-
-    return dict(zip(cell_ids, (counts / max_count).tolist()))
+    return {c: n / max_count for c, n in counts.items()}

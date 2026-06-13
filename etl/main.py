@@ -20,8 +20,8 @@ from src.fetch.nrpzs import fetch_nrpzs_pois
 from src.fetch.gtfs import fetch_gtfs_stops
 from src.fetch.noise import fetch_noise_polygons
 from src.fetch.crime import fetch_crime_points
-from src.score.h3_scorer import get_city_cells, score_cells
-from src.score.noise_scorer import score_cells_quiet
+from src.score.h3_scorer import get_city_cells, score_cells, count_cells
+from src.score.noise_scorer import score_cells_quiet, cell_max_db
 from src.build.pmtiles import build_pmtiles, build_combined_pmtiles
 
 OUTPUT_DIR = Path("output/cities")
@@ -187,6 +187,9 @@ def main(dry_run: bool = False, only_city: str | None = None) -> None:
     for layer in LAYERS:
         layer_name = layer["name"]
         all_scores: dict[str, float] = {}
+        # concrete metric per cell: object count (POI/crime) or dB (quiet),
+        # stored as `n_<layer>` so the report can show real numbers.
+        all_metrics: dict[str, int] = {}
 
         for city in cities:
             print(f"[{layer_name}] {city['name']}: fetching...")
@@ -200,8 +203,12 @@ def main(dry_run: bool = False, only_city: str | None = None) -> None:
             cells = get_city_cells(city["bbox"], RESOLUTION)
             if layer.get("kind") == "zonal":
                 scores = score_cells_quiet(fetched, cells)
+                all_metrics.update({c: int(round(db)) for c, db in cell_max_db(fetched, cells).items()})
             else:
-                scores = score_cells(fetched, cells)
+                counts = count_cells(fetched, cells)
+                all_metrics.update(counts)
+                max_count = max(counts.values()) if counts else 0
+                scores = {c: (n / max_count if max_count else 0.0) for c, n in counts.items()}
                 if layer.get("invert"):
                     scores = {c: 1.0 - v for c, v in scores.items()}
             all_scores.update(scores)
@@ -215,7 +222,9 @@ def main(dry_run: bool = False, only_city: str | None = None) -> None:
             continue
 
         for cell, score in all_scores.items():
-            combined.setdefault(cell, {})[layer_name] = score
+            entry = combined.setdefault(cell, {})
+            entry[layer_name] = score
+            entry[f"n_{layer_name}"] = all_metrics.get(cell, 0)
 
         out = OUTPUT_DIR / f"{layer_name}.pmtiles"
         print(f"[{layer_name}] building PMTiles ({len(all_scores)} cells) -> {out}")

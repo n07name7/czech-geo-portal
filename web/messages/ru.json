@@ -75,6 +75,9 @@
     "pdfBuy": "Купить PDF за {price} Kč",
     "proHint": "Часто ищете? Попробуйте",
     "proLink": "подписку Pro",
-    "pdfSoon": "Скоро"
+    "pdfSoon": "Скоро",
+    "within800": "в радиусе 800 м",
+    "incidents": "случаев/год",
+    "quietZone": "тихая зона"
   }
 }

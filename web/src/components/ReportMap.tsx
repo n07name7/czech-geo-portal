@@ -104,9 +104,15 @@ export default function ReportMap({ lat, lon, onScores }: Props) {
       }
       if (!best || bestDist > 0.004) { resolve(null); return; } // outside coverage
       const props = best.properties ?? {};
-      const scores: Record<string, number> = {};
-      for (const l of LAYERS) scores[l.id] = Number(props[l.id]) || 0;
-      resolve(scores);
+      // Pass every numeric property: layer scores (keyed by id) and concrete
+      // metrics (keyed "n_<id>" — object counts or dB).
+      const out: Record<string, number> = {};
+      for (const [k, v] of Object.entries(props)) {
+        const n = Number(v);
+        if (!Number.isNaN(n)) out[k] = n;
+      }
+      for (const l of LAYERS) if (!(l.id in out)) out[l.id] = 0;
+      resolve(out);
     };
 
     map.on("idle", readScores);

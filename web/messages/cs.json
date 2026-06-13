@@ -75,6 +75,9 @@
     "pdfBuy": "Koupit PDF za {price} Kč",
     "proHint": "Často hledáte? Vyzkoušejte",
     "proLink": "předplatné Pro",
-    "pdfSoon": "Brzy k dispozici"
+    "pdfSoon": "Brzy k dispozici",
+    "within800": "do 800 m",
+    "incidents": "případů/rok",
+    "quietZone": "tichá zóna"
   }
 }

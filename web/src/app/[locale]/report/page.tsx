@@ -119,10 +119,23 @@ export default function ReportPage() {
     return vals.reduce((a, b) => a + b, 0) / vals.length;
   }, [scores]);
 
+  // Concrete metric per layer: object count within 800 m, dB for noise,
+  // incidents/year for safety — far more informative than the 0–100 score.
+  const metricText = (id: string, n: number): string => {
+    if (id === "quiet") return n > 0 ? `${n} dB` : t("report.quietZone");
+    if (id === "safety") return `${n} ${t("report.incidents")}`;
+    return `${n} ${t("report.within800")}`;
+  };
+
   const ranked = useMemo(() => {
     if (!scores) return [];
     return LAYERS
-      .map((l) => ({ id: l.id, label: t(l.labelKey), value: scores[l.id] ?? 0 }))
+      .map((l) => ({
+        id: l.id,
+        label: t(l.labelKey),
+        value: scores[l.id] ?? 0,
+        count: scores[`n_${l.id}`] ?? 0,
+      }))
       .sort((a, b) => b.value - a.value);
   }, [scores, t]);
 
@@ -197,21 +210,21 @@ export default function ReportPage() {
                     </div>
                   </div>
 
-                  {/* Bars */}
-                  <div className="space-y-2 mb-6">
+                  {/* Per-category rows: concrete number + score bar */}
+                  <div className="space-y-2.5 mb-6">
                     {ranked.map((r) => (
                       <div key={r.id} className="flex items-center gap-3">
                         <span className="w-28 text-[11px] font-body text-[var(--text-muted)] truncate">
                           {r.label}
                         </span>
-                        <div className="flex-1 h-2 bg-[var(--card)] overflow-hidden">
+                        <div className="flex-1 h-1.5 bg-[var(--card)] overflow-hidden">
                           <div
                             className="h-full transition-all"
                             style={{ width: `${r.value * 100}%`, background: scoreColor(r.value) }}
                           />
                         </div>
-                        <span className="w-7 text-right text-[11px] font-body text-[var(--text-faint)] tabular-nums">
-                          {Math.round(r.value * 100)}
+                        <span className="w-24 text-right text-[11px] font-body text-[var(--text)] tabular-nums">
+                          {metricText(r.id, r.count)}
                         </span>
                       </div>
                     ))}

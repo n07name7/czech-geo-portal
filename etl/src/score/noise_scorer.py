@@ -15,15 +15,15 @@ def db_to_score(db: float) -> float:
     return float(np.clip((_DB_LOUD - db) / (_DB_LOUD - _DB_QUIET), 0.0, 1.0))
 
 
-def score_cells_quiet(
+def cell_max_db(
     noise_polys: list[tuple[object, float]],
     cell_ids: list[str],
 ) -> dict[str, float]:
-    """For each cell, take the loudest band covering its center."""
+    """Loudest noise band (dB Lden) covering each cell centre; 0 if none."""
     if not cell_ids:
         return {}
     if not noise_polys:
-        return {c: 1.0 for c in cell_ids}
+        return {c: 0.0 for c in cell_ids}
 
     geoms = [g for g, _ in noise_polys]
     dbs = np.array([db for _, db in noise_polys])
@@ -38,4 +38,12 @@ def score_cells_quiet(
         if dbs[geom_idx] > max_db[point_idx]:
             max_db[point_idx] = dbs[geom_idx]
 
-    return {c: db_to_score(max_db[i]) for i, c in enumerate(cell_ids)}
+    return {c: float(max_db[i]) for i, c in enumerate(cell_ids)}
+
+
+def score_cells_quiet(
+    noise_polys: list[tuple[object, float]],
+    cell_ids: list[str],
+) -> dict[str, float]:
+    """For each cell, take the loudest band covering its center."""
+    return {c: db_to_score(db) for c, db in cell_max_db(noise_polys, cell_ids).items()}

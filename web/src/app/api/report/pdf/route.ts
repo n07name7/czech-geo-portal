@@ -21,6 +21,12 @@ const LAYER_LABELS: Record<string, string> = {
   safety: "Bezpečnost",
 };
 
+function metricText(id: string, n: number): string {
+  if (id === "quiet") return n > 0 ? `${n} dB` : "tichá zóna";
+  if (id === "safety") return `${n} případů/rok`;
+  return `${n} do 800 m`;
+}
+
 const SOURCES = [
   "Školy/školky: Rejstřík škol MŠMT + RÚIAN (ČÚZK)",
   "Lékaři, lékárny: NRPZS / ÚZIS ČR (CC BY 4.0)",
@@ -92,12 +98,13 @@ export async function POST(req: NextRequest) {
     .map((k) => ({ k, v: Number(scores[k]) || 0 }))
     .sort((a, b) => b.v - a.v);
   const barX = margin + 150;
-  const barW = width - barX - margin - 30;
+  const barW = width - barX - margin - 80; // room for the count label on the right
   for (const { k, v } of ranked) {
     text(LAYER_LABELS[k], margin, y, 10, font, ink);
     page.drawRectangle({ x: barX, y: y - 2, width: barW, height: 7, color: rgb(0.9, 0.92, 0.94) });
     page.drawRectangle({ x: barX, y: y - 2, width: barW * v, height: 7, color: accent });
-    text(String(Math.round(v * 100)), barX + barW + 8, y, 9, font, muted);
+    const n = Number(scores[`n_${k}`]) || 0;
+    text(metricText(k, n), barX + barW + 8, y, 9, font, muted);
     y -= 20;
   }
 
@@ -111,8 +118,12 @@ export async function POST(req: NextRequest) {
   }
   y -= 8;
   text(
-    "Skóre vyjadřuje hustotu a dostupnost v okruhu ~800 m od dané buňky, normalizováno 0–100 v rámci města.",
+    "Čísla udávají počet objektů do 800 m od adresy (u klidu hladinu hluku Lden, u bezpečnosti počet",
     margin, y, 8, font, muted,
+  );
+  text(
+    "případů za rok). Pruh ukazuje relativní hodnocení dané lokality v rámci města.",
+    margin, y - 11, 8, font, muted,
   );
 
   const bytes = await doc.save();
