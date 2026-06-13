@@ -16,9 +16,13 @@ export async function GET(
 
   const res = await fetch(upstream, { headers: upstreamHeaders, redirect: "follow" });
 
+  // Only cache successful responses. Caching a 404 for an hour means a layer
+  // added between ETL runs (e.g. combined.pmtiles) stays invisible long after
+  // it exists in the release.
+  const ok = res.status >= 200 && res.status < 300;
   const responseHeaders = new Headers({
     "access-control-allow-origin": "*",
-    "cache-control": "public, max-age=3600",
+    "cache-control": ok ? "public, max-age=3600" : "no-store",
     "content-type": "application/octet-stream",
   });
 
