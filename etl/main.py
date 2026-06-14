@@ -20,8 +20,10 @@ from src.fetch.nrpzs import fetch_nrpzs_pois
 from src.fetch.gtfs import fetch_gtfs_stops
 from src.fetch.noise import fetch_noise_polygons
 from src.fetch.crime import fetch_crime_points
+from src.fetch.school_quality import fetch_school_quality
 from src.score.h3_scorer import get_city_cells, score_cells, count_cells
 from src.score.noise_scorer import score_cells_quiet, cell_max_db
+from src.score.quality_scorer import score_cells_quality
 from src.build.pmtiles import build_pmtiles, build_combined_pmtiles
 
 OUTPUT_DIR = Path("output/cities")
@@ -95,6 +97,8 @@ LAYERS: list[dict] = [
     {"name": "quiet",         "fetcher": fetch_noise_polygons, "kind": "zonal"},
     # inverted layers: density is bad — score flipped so 1.0 = safest
     {"name": "safety",        "fetcher": fetch_crime_points, "invert": True},
+    # quality layer: best nearby secondary school by CERMAT percentile (not a count)
+    {"name": "highschool",    "fetcher": fetch_school_quality, "kind": "quality"},
 ]
 
 
@@ -201,9 +205,13 @@ def main(dry_run: bool = False, only_city: str | None = None) -> None:
                 continue
 
             cells = get_city_cells(city["bbox"], RESOLUTION)
-            if layer.get("kind") == "zonal":
+            kind = layer.get("kind")
+            if kind == "zonal":
                 scores = score_cells_quiet(fetched, cells)
                 all_metrics.update({c: int(round(db)) for c, db in cell_max_db(fetched, cells).items()})
+            elif kind == "quality":
+                scores, metric = score_cells_quality(fetched, cells)
+                all_metrics.update(metric)
             else:
                 counts = count_cells(fetched, cells)
                 all_metrics.update(counts)

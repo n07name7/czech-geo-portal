@@ -9,7 +9,8 @@ export type LayerId =
   | "sports"
   | "shops"
   | "quiet"
-  | "safety";
+  | "safety"
+  | "highschool";
 
 export interface LayerConfig {
   id: LayerId;

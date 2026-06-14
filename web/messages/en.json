@@ -22,7 +22,8 @@
     "sports": "Sports facilities",
     "shops": "Grocery shops",
     "quiet": "Quietness (noise)",
-    "safety": "Safety"
+    "safety": "Safety",
+    "highschool": "School quality"
   },
   "nav": {
     "map": "Map",
@@ -79,7 +80,8 @@
     "within800": "within 800 m",
     "incidents": "incidents/yr",
     "quietZone": "quiet zone",
-    "radiusNote": "Counts within 800 m of the address (≈10 min walk); safety over the last 12 months.",
-    "mapLegend": "Area colour = overall location rating (brighter = better)"
+    "radiusNote": "Counts within 800 m of the address (≈10 min walk); safety over the last 12 months. School quality: best secondary school within 3 km by entrance-exam percentile (CERMAT).",
+    "mapLegend": "Area colour = overall location rating (brighter = better)",
+    "percentile": " pct"
   }
 }

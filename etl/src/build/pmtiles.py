@@ -76,15 +76,27 @@ def aggregate_props_to_parent(
     }
 
 
-def combined_to_geojson(cell_props: dict[str, dict[str, float]]) -> dict:
-    """One feature per cell carrying every layer score as a property."""
+def combined_to_geojson(
+    cell_props: dict[str, dict[str, float]],
+    include_counts: bool = True,
+) -> dict:
+    """One feature per cell carrying every layer score as a property.
+
+    The n_<layer> count properties are only read by the report at the
+    deepest zoom, so include_counts=False drops them from coarse bands to
+    roughly halve the combined file size.
+    """
     features = []
     for cell_id, props in cell_props.items():
         boundary = h3.cell_to_boundary(cell_id)
         coords = [[lon, lat] for lat, lon in boundary]
         coords.append(coords[0])
         properties = {"cell": cell_id}
-        properties.update({layer: round(score, 3) for layer, score in props.items()})
+        properties.update({
+            layer: round(score, 3)
+            for layer, score in props.items()
+            if include_counts or not layer.startswith("n_")
+        })
         features.append({
             "type": "Feature",
             "geometry": {"type": "Polygon", "coordinates": [coords]},
@@ -159,10 +171,12 @@ def build_combined_pmtiles(
         band_files: list[str] = []
 
         for res, minzoom, maxzoom, agg in RES_ZOOM_BANDS:
-            level = cell_props if agg == "base" else aggregate_props_to_parent(cell_props, res)
+            is_base = agg == "base"
+            level = cell_props if is_base else aggregate_props_to_parent(cell_props, res)
             geojson_path = tmp / f"res{res}.geojson"
             with open(geojson_path, "w") as f:
-                json.dump(combined_to_geojson(level), f)
+                # counts only needed at the deepest band the report reads
+                json.dump(combined_to_geojson(level, include_counts=is_base), f)
 
             band_path = tmp / f"res{res}.mbtiles"
             _run([

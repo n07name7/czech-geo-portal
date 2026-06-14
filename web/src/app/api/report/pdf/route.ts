@@ -19,11 +19,13 @@ const LAYER_LABELS: Record<string, string> = {
   shops: "Obchody",
   quiet: "Klid (hluk)",
   safety: "Bezpečnost",
+  highschool: "Kvalita SŠ",
 };
 
 function metricText(id: string, n: number): string {
   if (id === "quiet") return n > 0 ? `${n} dB` : "tichá zóna";
   if (id === "safety") return `${n} případů/rok`;
+  if (id === "highschool") return n > 0 ? `${n}. percentil` : "—";
   return `${n} do 800 m`;
 }
 

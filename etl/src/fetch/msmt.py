@@ -4,14 +4,8 @@ Source: RSSZ open data (data.gov.cz, publisher 00022985), full-country
 JSON-LD dump. Addresses carry RÚIAN codes; coordinates come from the
 ČÚZK address-point dump (see ruian.py). License: open data, attribution.
 """
-import requests
-
+from .registry import load_registry
 from .ruian import geocode_codes
-
-REGISTRY_URL = (
-    "https://lkod-ftp.msmt.gov.cz/00022985/"
-    "88a7c12b-6084-4e47-8b50-46097c6e683f/RSSZ-cela-CR.jsonld"
-)
 
 # druh codes in the registry
 LAYER_DRUH: dict[str, set[str]] = {
@@ -28,12 +22,10 @@ def _build_country_cache() -> dict[str, list[tuple[float, float]]]:
     if _country_cache is not None:
         return _country_cache
 
-    registry = requests.get(REGISTRY_URL, timeout=600).json()
-
     # collect RÚIAN address codes per layer; one school can teach at
     # several places (mistaVyuky) — each place counts as a POI
     layer_codes: dict[str, set[int]] = {layer: set() for layer in LAYER_DRUH}
-    for entity in registry.get("list", []):
+    for entity in load_registry():
         for facility in entity.get("skolyAZarizeni", []):
             druh = facility.get("druh")
             for layer, druhy in LAYER_DRUH.items():

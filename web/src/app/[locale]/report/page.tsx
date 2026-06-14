@@ -125,6 +125,7 @@ export default function ReportPage() {
   const metricText = (id: string, n: number): string => {
     if (id === "quiet") return n > 0 ? `${n} dB` : t("report.quietZone");
     if (id === "safety") return `${n} ${t("report.incidents")}`;
+    if (id === "highschool") return n > 0 ? `${n}${t("report.percentile")}` : "—";
     return `${n}`;
   };
 
