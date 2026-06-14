@@ -94,7 +94,13 @@ export default function ReportMap({ lat, lon, onScores, legend }: Props) {
       if (resolved.current) return;
       const { lat: tlat, lon: tlon } = target.current;
       const raw = map.querySourceFeatures("combined", { sourceLayer: "cells" });
-      if (raw.length === 0) return; // tiles not loaded yet — wait for next idle
+      if (raw.length === 0) {
+        // No cells here. If the data source has finished loading, the address
+        // is genuinely outside coverage → answer now instead of waiting for
+        // the 15s timeout. Otherwise tiles are still loading — wait.
+        if (map.isSourceLoaded("combined")) resolve(null);
+        return;
+      }
       let best: (typeof raw)[number] | null = null;
       let bestDist = Infinity;
       const cosLat = Math.cos(tlat * Math.PI / 180);

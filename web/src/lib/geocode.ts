@@ -33,12 +33,16 @@ export async function geocode(
   if (!res.ok) return [];
   const data = await res.json();
   const out: GeocodeResult[] = [];
+  const seen = new Set<string>();
   for (const f of data.features ?? []) {
     const p = f.properties ?? {};
     if (p.countrycode !== "CZ") continue;
     const [lon, lat] = f.geometry?.coordinates ?? [];
     if (typeof lat !== "number" || typeof lon !== "number") continue;
-    out.push({ label: formatLabel(p), lat, lon, city: p.city });
+    const label = formatLabel(p);
+    if (seen.has(label)) continue; // Photon often returns the same address several times
+    seen.add(label);
+    out.push({ label, lat, lon, city: p.city });
   }
   return out;
 }
