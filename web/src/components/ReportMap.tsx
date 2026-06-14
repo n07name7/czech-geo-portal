@@ -26,9 +26,11 @@ interface Props {
   lat: number;
   lon: number;
   onScores: (scores: Record<string, number> | null) => void;
+  /** Caption explaining what the coloured hexagons mean */
+  legend: string;
 }
 
-export default function ReportMap({ lat, lon, onScores }: Props) {
+export default function ReportMap({ lat, lon, onScores, legend }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
@@ -142,5 +144,17 @@ export default function ReportMap({ lat, lon, onScores }: Props) {
     map.jumpTo({ center: [lon, lat], zoom: 14 });
   }, [lat, lon]);
 
-  return <div ref={containerRef} className="w-full h-full" />;
+  return (
+    <div className="relative w-full h-full">
+      <div ref={containerRef} className="w-full h-full" />
+      {/* Caption: the hexagons show overall area quality (same as the score) */}
+      <div className="absolute bottom-2 left-2 z-10 flex items-center gap-2 bg-[#0b0d12]/85 border border-[var(--border)] px-2.5 py-1.5 pointer-events-none">
+        <span
+          className="w-10 h-1.5 rounded-sm"
+          style={{ background: "linear-gradient(to right, #1a3a3a, #1d7c48, #52b146, #d2e022, #fcd230)" }}
+        />
+        <span className="text-[9px] font-body text-[var(--text-muted)] leading-tight">{legend}</span>
+      </div>
+    </div>
+  );
 }

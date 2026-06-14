@@ -180,7 +180,7 @@ export default function ReportPage() {
           <div className="grid md:grid-cols-2 gap-6">
             {/* Map */}
             <div className="h-72 md:h-[28rem] border border-[var(--border)] overflow-hidden">
-              <ReportMap lat={selected.lat} lon={selected.lon} onScores={handleScores} />
+              <ReportMap lat={selected.lat} lon={selected.lon} onScores={handleScores} legend={t("report.mapLegend")} />
             </div>
 
             {/* Report */}

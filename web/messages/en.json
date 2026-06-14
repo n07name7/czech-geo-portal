@@ -79,6 +79,7 @@
     "within800": "within 800 m",
     "incidents": "incidents/yr",
     "quietZone": "quiet zone",
-    "radiusNote": "Counts within 800 m of the address (≈10 min walk); safety over the last 12 months."
+    "radiusNote": "Counts within 800 m of the address (≈10 min walk); safety over the last 12 months.",
+    "mapLegend": "Area colour = overall location rating (brighter = better)"
   }
 }

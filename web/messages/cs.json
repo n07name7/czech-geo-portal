@@ -79,6 +79,7 @@
     "within800": "do 800 m",
     "incidents": "případů/rok",
     "quietZone": "tichá zóna",
-    "radiusNote": "Počty v okruhu 800 m od adresy (≈10 min chůze); bezpečnost za posledních 12 měsíců."
+    "radiusNote": "Počty v okruhu 800 m od adresy (≈10 min chůze); bezpečnost za posledních 12 měsíců.",
+    "mapLegend": "Barva okolí = celkové hodnocení lokality (světlejší = lepší)"
   }
 }
