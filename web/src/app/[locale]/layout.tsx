@@ -24,16 +24,16 @@ const outfit = Outfit({
 
 const META: Record<string, { title: string; description: string }> = {
   cs: {
-    title: "Kam v Česku? — Infrastrukturní mapa Prahy",
-    description: "Porovnejte čtvrti v Praze podle škol, parků, dopravy a dalších 9 vrstev infrastruktury.",
+    title: "Kam v Česku? — Kde bydlet podle kvality okolí",
+    description: "Porovnejte čtvrti podle škol, klidu, bezpečnosti, dopravy a dalších vrstev a najděte tu pravou pro sebe.",
   },
   en: {
-    title: "Where in Czechia? — Prague infrastructure map",
-    description: "Compare Prague neighbourhoods by schools, parks, transport, and 9 infrastructure layers.",
+    title: "Kam v Česku? — Where to live by neighbourhood quality",
+    description: "Compare neighbourhoods by schools, quiet, safety, transport and more, and find the right one for you.",
   },
   ru: {
-    title: "Куда в Чехии? — Карта инфраструктуры Праги",
-    description: "Сравнивайте районы Праги по школам, паркам, транспорту и 9 другим слоям.",
+    title: "Kam v Česku? — Где жить по качеству района",
+    description: "Сравнивайте районы по школам, тишине, безопасности, транспорту и другому — и найдите свой.",
   },
 };
 
