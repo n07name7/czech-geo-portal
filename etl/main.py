@@ -250,32 +250,45 @@ def main(dry_run: bool = False, only_city: str | None = None) -> None:
         build_pmtiles(all_scores, out)
         print(f"  {out.stat().st_size // 1024} KB\n")
 
-    # Combined dataset for the weighted "match" mode (every layer score per cell)
-    if combined:
+    # Combined dataset for the weighted "match" mode (every layer score per
+    # cell). Only rebuild it when ALL layers succeeded — a partial combined
+    # (missing a failed layer) would make the report show that layer as 0.
+    # On a partial run, keep the previous complete combined (backfilled below).
+    if combined and not failed_layers:
         out = OUTPUT_DIR / "combined.pmtiles"
         print(f"[combined] building PMTiles ({len(combined)} cells) -> {out}")
         build_combined_pmtiles(combined, out)
         print(f"  {out.stat().st_size // 1024} KB\n")
+    elif failed_layers:
+        print("[combined] some layers failed — keeping previous combined.pmtiles\n")
 
-    # City averages for the PDF comparison
+    # City averages for the PDF comparison (only on a complete run)
     import json as _json
     avg_path = OUTPUT_DIR / "averages.json"
-    avg_path.write_text(_json.dumps(city_avgs))
-    print(f"[averages] wrote {avg_path} ({len(city_avgs)} cities)")
+    if not failed_layers:
+        avg_path.write_text(_json.dumps(city_avgs))
+        print(f"[averages] wrote {avg_path} ({len(city_avgs)} cities)")
 
     if failed_layers:
         print(f"WARNING: layers with no data this run: {failed_layers}")
     print("All layers done.")
 
     if not dry_run:
+        # On a partial run, restore the previous combined/averages too, so the
+        # published data stays internally consistent.
+        backfill = list(failed_layers)
         if failed_layers:
-            print("\nBackfilling skipped layers from previous release...")
-            backfill_missing_from_release(failed_layers)
+            backfill += ["combined"]
+        if backfill:
+            print(f"\nBackfilling from previous release: {backfill}")
+            backfill_missing_from_release(backfill)
+
         print("\nUploading to GitHub Releases...")
         names = [l["name"] for l in LAYERS] + ["combined"]
         files = [OUTPUT_DIR / f"{n}.pmtiles" for n in names
                  if (OUTPUT_DIR / f"{n}.pmtiles").exists()]
-        files.append(avg_path)
+        if avg_path.exists():
+            files.append(avg_path)
         upload_to_github_release(files)
         print("Upload complete.")
 
