@@ -207,7 +207,7 @@ export async function POST(req: NextRequest) {
 
   // ── strengths / weaknesses cards (right of radar) ──────────────────────────
   const ranked = ids.map((k) => ({ k, v: Number(scores[k]) || 0 })).sort((a, b) => b.v - a.v);
-  const cardX = rcx + rr + 50, cardW = W - M - cardX, cardTop = y - 18;
+  const cardX = rcx + rr + 50, cardTop = y - 18;
   const drawList = (title: string, items: { k: string; v: number }[], col: RGB, yTop: number) => {
     g1.text(title, cardX, yTop, 9, bold, col);
     let yy = yTop - 16;
