@@ -36,6 +36,8 @@ const SOURCES = [
   "Lékaři, lékárny: NRPZS / ÚZIS ČR (CC BY 4.0)",
   "Klid (hluk): Strategické hlukové mapy 2022, MZ ČR",
   "Bezpečnost: Mapa kriminality, Policie ČR",
+  "Kvalita SŠ: Přijímací zkoušky CERMAT",
+  "Kvalita ovzduší: Pětileté průměry PM2.5, ČHMÚ",
   "Ostatní: OpenStreetMap (ODbL)",
 ];
 
