@@ -48,7 +48,9 @@
     "eyebrow": "Качество жизни",
     "statSource": "Открытые данные ЧР",
     "statLayers": "{count} слоёв данных",
-    "ctaReport": "Отчёт по адресу"
+    "ctaReport": "Отчёт по адресу",
+    "reportShowcaseTitle": "Что вы получаете в отчёте",
+    "reportShowcaseLead": "Введите адрес или кликните по карте и скачайте подробный PDF о районе:"
   },
   "methodology": {
     "title": "Методология",

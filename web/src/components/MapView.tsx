@@ -33,7 +33,11 @@ interface Props {
   ratingLabel: string;
 }
 
-/** Weighted-blend expression over combined-tile properties → 0..1 */
+/** Weighted-blend expression over combined-tile properties → 0..1.
+ *  The raw weighted average clusters in a narrow low band (most layers score
+ *  low for most cells), so colours barely move when weights change. We
+ *  contrast-stretch that typical band [LO,HI] onto the full 0..1 colour range,
+ *  which makes weight changes clearly visible while keeping order intact. */
 function blendExpr(weights: Record<LayerId, number>): unknown {
   const active = LAYERS.filter((l) => (weights[l.id] ?? 0) > 0);
   const total = active.reduce((s, l) => s + weights[l.id], 0);
@@ -42,7 +46,9 @@ function blendExpr(weights: Record<LayerId, number>): unknown {
   for (const l of active) {
     sum.push(["*", weights[l.id], ["coalesce", ["get", l.id], 0]]);
   }
-  return ["/", sum, total];
+  const avg = ["/", sum, total];
+  const LO = 0.1, HI = 0.58;
+  return ["max", 0, ["min", 1, ["/", ["-", avg, LO], HI - LO]]];
 }
 
 function getGradientConfig(basemapId: BasemapId) {

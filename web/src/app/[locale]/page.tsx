@@ -225,6 +225,37 @@ export default async function LandingPage() {
         </div>
       </section>
 
+      {/* ── Paid report showcase ─────────────────────────────────────────── */}
+      <section className="border-t border-[var(--border)] py-24 px-8 sm:px-14 lg:px-20">
+        <div className="max-w-5xl mx-auto">
+          <div className="flex items-baseline gap-6 mb-6">
+            <span className="text-[10px] tracking-[0.25em] uppercase text-[var(--accent)] font-body">
+              Report
+            </span>
+            <h2 className="font-display text-3xl text-[var(--text)]">
+              <ReportShowcaseTitle />
+            </h2>
+          </div>
+          <p className="font-body text-[var(--text-muted)] max-w-2xl mb-10">
+            <ReportShowcaseLead />
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-4 mb-12">
+            {["rent", "nearby", "reach", "flags", "env", "city"].map((k) => (
+              <ReportFeature key={k} featKey={k} />
+            ))}
+          </div>
+
+          <Link
+            href={`/${locale}/report`}
+            className="inline-flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[#0b0d12] font-body font-semibold text-sm px-6 py-3 rounded-none transition-colors"
+          >
+            <ReportLabel />
+            <span className="text-base leading-none">→</span>
+          </Link>
+        </div>
+      </section>
+
       {/* ── Footer ───────────────────────────────────────────────────────── */}
       <footer className="border-t border-[var(--border)] py-8 px-8 sm:px-14 lg:px-20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <span className="font-display text-sm text-[var(--text-faint)] tracking-wider uppercase">
@@ -283,6 +314,26 @@ function CtaLabel() {
 function ReportLabel() {
   const t = useTranslations("landing");
   return <>{t("ctaReport")}</>;
+}
+
+function ReportShowcaseTitle() {
+  const t = useTranslations("landing");
+  return <>{t("reportShowcaseTitle")}</>;
+}
+
+function ReportShowcaseLead() {
+  const t = useTranslations("landing");
+  return <>{t("reportShowcaseLead")}</>;
+}
+
+function ReportFeature({ featKey }: { featKey: string }) {
+  const t = useTranslations("report");
+  return (
+    <div className="flex items-start gap-3 border-t border-[var(--border)] pt-3">
+      <span className="text-[var(--accent)] text-sm leading-none mt-0.5">✓</span>
+      <span className="font-body text-sm text-[var(--text-muted)] leading-snug">{t(`feat.${featKey}`)}</span>
+    </div>
+  );
 }
 
 function MetodLabel() {
