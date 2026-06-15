@@ -23,7 +23,8 @@
     "shops": "Grocery shops",
     "quiet": "Quietness (noise)",
     "safety": "Safety",
-    "highschool": "School quality"
+    "highschool": "School quality",
+    "air": "Air quality"
   },
   "nav": {
     "map": "Map",

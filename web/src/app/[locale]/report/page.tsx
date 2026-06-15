@@ -11,7 +11,7 @@ import { REPORT_PRICE_CZK, PAYMENTS_VISIBLE } from "@/lib/payment";
 const ReportMap = dynamic(() => import("@/components/ReportMap"), { ssr: false });
 
 // Categories behind the paywall — the "how good" depth, vs the free "what's around".
-const PREMIUM_LAYERS = new Set<string>(["highschool"]);
+const PREMIUM_LAYERS = new Set<string>(["highschool", "air"]);
 
 function scoreColor(v: number): string {
   // dark green → amber, matching the map gradient
@@ -129,6 +129,7 @@ export default function ReportPage() {
     if (id === "quiet") return n > 0 ? `${n} dB` : t("report.quietZone");
     if (id === "safety") return `${n} ${t("report.incidents")}`;
     if (id === "highschool") return n > 0 ? `${n}${t("report.percentile")}` : "—";
+    if (id === "air") return n > 0 ? `${n} µg/m³` : "—";
     return `${n}`;
   };
 

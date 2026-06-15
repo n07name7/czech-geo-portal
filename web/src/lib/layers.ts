@@ -19,6 +19,7 @@ export const LAYERS: LayerConfig[] = [
   { id: "quiet",         labelKey: "layers.quiet",         pmtilesUrl: `${R2_BASE}/quiet.pmtiles${bust}` },
   { id: "safety",        labelKey: "layers.safety",        pmtilesUrl: `${R2_BASE}/safety.pmtiles${bust}` },
   { id: "highschool",    labelKey: "layers.highschool",    pmtilesUrl: `${R2_BASE}/highschool.pmtiles${bust}` },
+  { id: "air",           labelKey: "layers.air",           pmtilesUrl: `${R2_BASE}/air.pmtiles${bust}` },
 ];
 
 // Combined dataset for match mode: one cell carries every layer's score as a

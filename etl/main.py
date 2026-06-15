@@ -21,9 +21,11 @@ from src.fetch.gtfs import fetch_gtfs_stops
 from src.fetch.noise import fetch_noise_polygons
 from src.fetch.crime import fetch_crime_points
 from src.fetch.school_quality import fetch_school_quality
+from src.fetch.air import fetch_air
 from src.score.h3_scorer import get_city_cells, score_cells, count_cells
 from src.score.noise_scorer import score_cells_quiet, cell_max_db
 from src.score.quality_scorer import score_cells_quality
+from src.score.air_scorer import score_cells_air
 from src.build.pmtiles import build_pmtiles, build_combined_pmtiles
 
 OUTPUT_DIR = Path("output/cities")
@@ -99,6 +101,8 @@ LAYERS: list[dict] = [
     {"name": "safety",        "fetcher": fetch_crime_points, "invert": True},
     # quality layer: best nearby secondary school by CERMAT percentile (not a count)
     {"name": "highschool",    "fetcher": fetch_school_quality, "kind": "quality"},
+    # air layer: PM2.5 5-year average; score inverted (clean = 1), metric = µg/m³
+    {"name": "air",           "fetcher": fetch_air, "kind": "air"},
 ]
 
 
@@ -211,6 +215,9 @@ def main(dry_run: bool = False, only_city: str | None = None) -> None:
                 all_metrics.update({c: int(round(db)) for c, db in cell_max_db(fetched, cells).items()})
             elif kind == "quality":
                 scores, metric = score_cells_quality(fetched, cells)
+                all_metrics.update(metric)
+            elif kind == "air":
+                scores, metric = score_cells_air(fetched, cells)
                 all_metrics.update(metric)
             else:
                 counts = count_cells(fetched, cells)

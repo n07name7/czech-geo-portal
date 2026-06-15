@@ -14,6 +14,7 @@ const DATA_SOURCES = [
   { layer: "Klid (hluk)", source: "Strategické hlukové mapy 2022, MZ ČR", freq: "Týdně" },
   { layer: "Bezpečnost", source: "Mapa kriminality, Policie ČR (12 měsíců)", freq: "Týdně" },
   { layer: "Kvalita SŠ", source: "Přijímací zkoušky CERMAT + Rejstřík škol MŠMT", freq: "Ročně" },
+  { layer: "Kvalita ovzduší", source: "Pětileté průměry PM2.5, ČHMÚ (1×1 km)", freq: "Ročně" },
 ];
 
 const SCORING_STEPS = [
