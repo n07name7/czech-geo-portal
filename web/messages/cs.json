@@ -99,6 +99,10 @@
       "school": "Základní škola",
       "transit": "MHD zastávka",
       "park": "Park"
-    }
+    },
+    "rentTitle": "Nájemné v okolí",
+    "rentUnit": "Kč/m²/měs",
+    "rentVs": "vs medián · {city}",
+    "rentSource": "Zdroj: MF ČR · cenová mapa nájemného"
   }
 }

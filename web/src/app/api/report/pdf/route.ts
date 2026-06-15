@@ -91,10 +91,11 @@ function loadFont(name: string): Uint8Array {
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
-  const { address, scores, session, mapImage, cityAvg, cityName, nearby } = body as {
+  const { address, scores, session, mapImage, cityAvg, cityName, nearby, rent, rentCity, rentQuarter } = body as {
     address?: string; scores?: Record<string, number>; session?: string | null;
     mapImage?: string; cityAvg?: Record<string, number>; cityName?: string;
     nearby?: Record<string, { name: string; dist: number; min: number }>;
+    rent?: number; rentCity?: number; rentQuarter?: string;
   };
 
   if (!(await sessionPaid(session ?? null)))
@@ -179,6 +180,19 @@ export async function POST(req: NextRequest) {
   g1.text("OKOLÍ ADRESY", bx + 10, bTop - 14, 8, bold, rgb(1, 1, 1));
 
   y = bTop - bh - 24;
+
+  // ── rent headline (official MF ČR cenová mapa), centered under the map ──────
+  if (typeof rent === "number" && rent > 0) {
+    g1.textC(`Nájemné v okolí:  ≈ ${rent} Kč/m²/měs`, W / 2, 469, 11, bold, TEXT);
+    if (typeof rentCity === "number" && rentCity > 0) {
+      const diff = Math.round(((rent - rentCity) / rentCity) * 100);
+      const word = diff > 0 ? "dráž" : diff < 0 ? "levněji" : "stejně jako";
+      const txt = diff === 0
+        ? `stejně jako medián${cityName ? ` · ${cityName}` : ""}`
+        : `o ${Math.abs(diff)} % ${word} než medián${cityName ? ` · ${cityName}` : ""}`;
+      g1.textC(txt, W / 2, 458, 8, font, diff > 0 ? BAD : GOOD);
+    }
+  }
 
   // ── gauge (overall) + verdict (left) ───────────────────────────────────────
   const gx = M + 48, gy = y - 50, gr = 42;
@@ -315,7 +329,10 @@ export async function POST(req: NextRequest) {
   yy -= 30;
   g2.text("ZDROJE DAT", M, yy, 9, bold, ACCENT);
   yy -= 15;
-  for (const s of SOURCES) { g2.text("•  " + s, M, yy, 8, font, MUTED); yy -= 12; }
+  const sources = [...SOURCES];
+  if (typeof rent === "number" && rent > 0)
+    sources.splice(6, 0, `Nájemné: MF ČR – cenová mapa nájemního bydlení${rentQuarter ? ` (${rentQuarter})` : ""}`);
+  for (const s of sources) { g2.text("•  " + s, M, yy, 8, font, MUTED); yy -= 12; }
   yy -= 8;
   g2.text("Skóre 0–100 = relativní hodnocení v rámci města. Počty objektů do 800 m od adresy", M, yy, 7.5, font, FAINT);
   g2.text("(kvalita SŠ do 3 km, ovzduší roční průměr PM2.5).", M, yy - 10, 7.5, font, FAINT);

@@ -22,7 +22,9 @@ from src.fetch.noise import fetch_noise_polygons
 from src.fetch.crime import fetch_crime_points
 from src.fetch.school_quality import fetch_school_quality
 from src.fetch.air import fetch_air
+from src.fetch.rent import fetch_rent
 from src.score.h3_scorer import get_city_cells, score_cells, count_cells
+from src.score.rent_scorer import score_cells_rent
 from src.score.noise_scorer import score_cells_quiet, cell_max_db
 from src.score.quality_scorer import score_cells_quality
 from src.score.air_scorer import score_cells_air
@@ -256,6 +258,31 @@ def main(dry_run: bool = False, only_city: str | None = None) -> None:
         print(f"[{layer_name}] building PMTiles ({len(all_scores)} cells) -> {out}")
         build_pmtiles(all_scores, out)
         print(f"  {out.stat().st_size // 1024} KB\n")
+
+    # Rent level per cell (CZK/m²) from MF ČR cenová mapa joined to k.ú.
+    # polygons. Informational, not a scored layer — failure just omits it
+    # (the report hides the price block) and never blocks the combined build.
+    rent_quarter: str | None = None
+    for city in cities:
+        try:
+            areas, rent_quarter = fetch_rent(city["bbox"])
+            print(f"[rent] {city['name']}: {len(areas)} k.ú. with rent")
+        except Exception as e:
+            print(f"[rent] {city['name']} ERROR: {e}")
+            continue
+        cells = get_city_cells(city["bbox"], RESOLUTION)
+        cell_rent = score_cells_rent(areas, cells)
+        for cell, rent in cell_rent.items():
+            if cell in combined:
+                combined[cell]["rent"] = rent
+        vals = sorted(cell_rent.values())
+        if vals:
+            city_avgs[city["id"]]["rent"] = vals[len(vals) // 2]
+    if rent_quarter:
+        city_avgs["_meta"] = {
+            "rentQuarter": rent_quarter,
+            "rentSource": "MF ČR – cenová mapa nájemního bydlení",
+        }
 
     # Combined dataset for the weighted "match" mode (every layer score per
     # cell). Only rebuild it when ALL layers succeeded — a partial combined
