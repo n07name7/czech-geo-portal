@@ -6,7 +6,9 @@
     "matchHint": "Set what matters and find the best neighborhood for you.",
     "reset": "Reset",
     "openPanel": "Open panel",
-    "closePanel": "Close panel"
+    "closePanel": "Close panel",
+    "hideHex": "Hide hexagons",
+    "showHex": "Show hexagons"
   },
   "legend": {
     "low": "worse",

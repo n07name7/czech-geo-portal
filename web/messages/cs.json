@@ -6,7 +6,9 @@
     "matchHint": "Nastavte důležitost a najděte nejlepší čtvrť pro vás.",
     "reset": "Resetovat",
     "openPanel": "Otevřít panel",
-    "closePanel": "Zavřít panel"
+    "closePanel": "Zavřít panel",
+    "hideHex": "Skrýt hexagony",
+    "showHex": "Zobrazit hexagony"
   },
   "legend": {
     "low": "horší",

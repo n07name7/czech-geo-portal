@@ -31,6 +31,8 @@ interface Props {
   measureLabel: string;
   /** Word under the score, e.g. "rating" */
   ratingLabel: string;
+  /** Show/hide the coloured hexagon overlay */
+  hexVisible: boolean;
 }
 
 /** Weighted-blend expression over combined-tile properties → 0..1.
@@ -258,7 +260,7 @@ function attachAllLayers(
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function MapView({ activeLayer, basemap, activeCity, basemapId, matchMode, weights, measureLabel, ratingLabel }: Props) {
+export default function MapView({ activeLayer, basemap, activeCity, basemapId, matchMode, weights, measureLabel, ratingLabel, hexVisible }: Props) {
   const containerRef   = useRef<HTMLDivElement>(null);
   const mapRef         = useRef<maplibregl.Map | null>(null);
   const popupRef       = useRef<maplibregl.Popup | null>(null);
@@ -271,6 +273,7 @@ export default function MapView({ activeLayer, basemap, activeCity, basemapId, m
   const weightsRef     = useRef(weights);
   const measureLabelRef = useRef(measureLabel);
   const ratingLabelRef  = useRef(ratingLabel);
+  const hexVisibleRef  = useRef(hexVisible);
   const boundaryRef    = useRef<BoundaryGeoJson | null>(null);
   const boundaryCache  = useRef<Record<string, BoundaryGeoJson>>({});
 
@@ -280,6 +283,7 @@ export default function MapView({ activeLayer, basemap, activeCity, basemapId, m
   useEffect(() => { weightsRef.current     = weights;     }, [weights]);
   useEffect(() => { measureLabelRef.current = measureLabel; }, [measureLabel]);
   useEffect(() => { ratingLabelRef.current  = ratingLabel;  }, [ratingLabel]);
+  useEffect(() => { hexVisibleRef.current   = hexVisible;   }, [hexVisible]);
 
   // PMTiles protocol
   useEffect(() => {
@@ -420,7 +424,45 @@ export default function MapView({ activeLayer, basemap, activeCity, basemapId, m
       return total > 0 ? sum / total : 0;
     };
 
+    const activeFillId = () => (matchModeRef.current ? "combined-fill" : `${activeLayerRef.current}-fill`);
+
+    // Highlight + popup for the hex under cursor. Shared by the fast hover path
+    // and the reliable tap path.
+    const applyHex = (sourceId: string, props: Record<string, unknown>, lngLat: maplibregl.LngLat): boolean => {
+      const score = matchModeRef.current ? blendScore(props) : (Number(props.score) || 0);
+      if (score <= 0) return false;
+      const h3index = (props.cell as string) ?? "";
+      if (!h3index) return false;
+      if (String(hoveredHexRef.current?.id) !== String(h3index)) {
+        if (hoveredHexRef.current) {
+          const prevHl = `${hoveredHexRef.current.source}-highlight`;
+          if (map.getLayer(prevHl)) map.setFilter(prevHl, ["==", ["get", "cell"], ""]);
+        }
+        hoveredHexRef.current = { id: String(h3index), source: sourceId };
+        const hlId = `${sourceId}-highlight`;
+        if (map.getLayer(hlId)) map.setFilter(hlId, ["==", ["get", "cell"], h3index]);
+      }
+      map.getCanvas().style.cursor = "pointer";
+      popup.setLngLat(lngLat).setHTML(popupHtml(score)).addTo(map);
+      return true;
+    };
+
+    // Fast hover: query only what is rendered under the cursor (O(1)-ish),
+    // instead of scanning every source feature — avoids the lag/"tail" when
+    // moving fast over a zoomed-out map with thousands of cells.
+    const showHover = (point: maplibregl.Point, lngLat: maplibregl.LngLat): boolean => {
+      if (!hexVisibleRef.current) return false;
+      const lid = activeFillId();
+      if (!map.getLayer(lid)) return false;
+      const feats = map.queryRenderedFeatures(point, { layers: [lid] });
+      const best = feats[0];
+      if (!best) return false;
+      const sourceId = matchModeRef.current ? "combined" : activeLayerRef.current;
+      return applyHex(sourceId, best.properties ?? {}, lngLat);
+    };
+
     const tryShowHex = (lngLat: maplibregl.LngLat): boolean => {
+      if (!hexVisibleRef.current) return false;
       const sourceId = matchModeRef.current ? "combined" : activeLayerRef.current;
       if (!map.getSource(sourceId)) return false;
 
@@ -468,10 +510,19 @@ export default function MapView({ activeLayer, basemap, activeCity, basemapId, m
       if (!tryShowHex(e.lngLat)) clearHover();
     });
 
-    // Desktop hover
+    // Desktop hover — coalesce rapid mousemoves to one cheap lookup per frame
+    let hoverRaf = 0;
+    let pendingPoint: maplibregl.Point | null = null;
+    let pendingLngLat: maplibregl.LngLat | null = null;
     map.on("mousemove", (e) => {
       if (Date.now() - lastTouchTime < 600) return;
-      if (!tryShowHex(e.lngLat)) clearHover();
+      pendingPoint = e.point;
+      pendingLngLat = e.lngLat;
+      if (hoverRaf) return;
+      hoverRaf = requestAnimationFrame(() => {
+        hoverRaf = 0;
+        if (pendingPoint && pendingLngLat && !showHover(pendingPoint, pendingLngLat)) clearHover();
+      });
     });
     map.on("mouseleave", () => {
       if (Date.now() - lastTouchTime < 600) return;
@@ -509,7 +560,7 @@ export default function MapView({ activeLayer, basemap, activeCity, basemapId, m
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
     for (const layer of LAYERS) {
-      const vis = !matchMode && layer.id === activeLayer ? "visible" : "none";
+      const vis = hexVisible && !matchMode && layer.id === activeLayer ? "visible" : "none";
       if (map.getLayer(`${layer.id}-fill`)) {
         map.setLayoutProperty(`${layer.id}-fill`, "visibility", vis);
       }
@@ -517,14 +568,15 @@ export default function MapView({ activeLayer, basemap, activeCity, basemapId, m
         map.setLayoutProperty(`${layer.id}-highlight`, "visibility", vis);
       }
     }
-    const matchVis = matchMode ? "visible" : "none";
+    const matchVis = hexVisible && matchMode ? "visible" : "none";
     if (map.getLayer("combined-fill")) {
       map.setLayoutProperty("combined-fill", "visibility", matchVis);
     }
     if (map.getLayer("combined-highlight")) {
       map.setLayoutProperty("combined-highlight", "visibility", matchVis);
     }
-  }, [activeLayer, matchMode]);
+    if (!hexVisible && popupRef.current) popupRef.current.remove();
+  }, [activeLayer, matchMode, hexVisible]);
 
   // Recompute the weighted blend when sliders move — instant, no refetch
   useEffect(() => {

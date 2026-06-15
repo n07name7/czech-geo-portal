@@ -36,6 +36,7 @@ export default function MapPage() {
     setCollapsed(window.innerWidth < 768);
   }, []);
   const [activeBasemap, setActiveBasemap] = useState<BasemapId>(DEFAULT_BASEMAP.id);
+  const [hexVisible, setHexVisible] = useState(true);
   const [matchMode, setMatchMode] = useState(false);
   const [weights, setWeights] = useState<Record<LayerId, number>>(DEFAULT_WEIGHTS);
   const t = useTranslations();
@@ -55,6 +56,7 @@ export default function MapPage() {
         weights={weights}
         measureLabel={matchMode ? t("ui.match") : t(`layers.${activeLayer}`)}
         ratingLabel={t("legend.rating")}
+        hexVisible={hexVisible}
       />
       <LayerPanel
         layers={LAYERS}
@@ -77,6 +79,19 @@ export default function MapPage() {
         gradientCss={LEGEND_GRADIENT_CSS[activeBasemap] ?? LEGEND_GRADIENT_CSS.tmava}
       />
       <BasemapSwitcher activeBasemap={activeBasemap} onChange={setActiveBasemap} />
+
+      {/* Hide / show the hexagon overlay */}
+      <button
+        onClick={() => setHexVisible((v) => !v)}
+        className="absolute left-0 z-20 flex items-center gap-1.5 bg-[var(--surface)] border border-l-0 border-[var(--border)] rounded-r-md shadow-lg pl-2.5 pr-3 py-2 text-[var(--text-muted)] hover:text-[var(--accent)] hover:bg-[var(--card)] transition-colors touch-manipulation"
+        style={{ top: 104 }}
+        aria-pressed={!hexVisible}
+      >
+        <span className="text-sm leading-none">⬡</span>
+        <span className="text-[10px] font-body font-medium uppercase tracking-[0.16em] leading-none">
+          {hexVisible ? t("ui.hideHex") : t("ui.showHex")}
+        </span>
+      </button>
     </main>
   );
 }
