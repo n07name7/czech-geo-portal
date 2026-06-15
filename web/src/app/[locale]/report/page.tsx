@@ -10,6 +10,9 @@ import { REPORT_PRICE_CZK, PAYMENTS_VISIBLE } from "@/lib/payment";
 
 const ReportMap = dynamic(() => import("@/components/ReportMap"), { ssr: false });
 
+// Categories behind the paywall — the "how good" depth, vs the free "what's around".
+const PREMIUM_LAYERS = new Set<string>(["highschool"]);
+
 function scoreColor(v: number): string {
   // dark green → amber, matching the map gradient
   if (v >= 0.8) return "#fcd230";
@@ -141,6 +144,10 @@ export default function ReportPage() {
       .sort((a, b) => b.value - a.value);
   }, [scores, t]);
 
+  const unlocked = !!paidSession;
+  const freeRows = ranked.filter((r) => !PREMIUM_LAYERS.has(r.id));
+  const premiumRows = ranked.filter((r) => PREMIUM_LAYERS.has(r.id));
+
   return (
     <main className="min-h-screen bg-[var(--bg)] flex flex-col">
       <NavBar />
@@ -216,8 +223,8 @@ export default function ReportPage() {
                   <p className="text-[10px] font-body text-[var(--text-faint)] mb-2">
                     {t("report.radiusNote")}
                   </p>
-                  <div className="space-y-2.5 mb-6">
-                    {ranked.map((r) => (
+                  <div className="space-y-2.5 mb-4">
+                    {freeRows.map((r) => (
                       <div key={r.id} className="flex items-center gap-3">
                         <span className="w-28 text-[11px] font-body text-[var(--text-muted)] truncate">
                           {r.label}
@@ -234,6 +241,36 @@ export default function ReportPage() {
                       </div>
                     ))}
                   </div>
+
+                  {/* Premium categories — locked teaser until unlocked */}
+                  {premiumRows.length > 0 && (
+                    <div className="mb-6 border-t border-[var(--border)] pt-3">
+                      <p className="text-[9px] font-body uppercase tracking-[0.18em] text-[var(--accent)] mb-2.5">
+                        {t("report.premiumTitle")}
+                      </p>
+                      <div className="space-y-2.5">
+                        {premiumRows.map((r) => (
+                          <div key={r.id} className="flex items-center gap-3">
+                            <span className="w-28 text-[11px] font-body text-[var(--text-muted)] truncate">
+                              {r.label}
+                            </span>
+                            <div className="flex-1 h-1.5 bg-[var(--card)] overflow-hidden">
+                              <div
+                                className={`h-full transition-all ${unlocked ? "" : "blur-[3px] opacity-60"}`}
+                                style={{
+                                  width: `${(unlocked ? r.value : 0.6) * 100}%`,
+                                  background: unlocked ? scoreColor(r.value) : "var(--text-faint)",
+                                }}
+                              />
+                            </div>
+                            <span className="w-24 text-right text-[11px] font-body text-[var(--text)] tabular-nums">
+                              {unlocked ? metricText(r.id, r.count) : "🔒"}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* PDF purchase / download */}
                   <div className="border border-[var(--accent)] border-opacity-40 p-4 bg-[var(--card)]">
@@ -259,7 +296,7 @@ export default function ReportPage() {
                         disabled={buying}
                         className="px-4 py-2 text-xs font-body uppercase tracking-[0.16em] bg-[var(--accent)] text-[#0b0d12] hover:opacity-90 transition-opacity disabled:opacity-50"
                       >
-                        {buying ? t("report.pdfWait") : t("report.pdfBuy", { price: REPORT_PRICE_CZK })}
+                        {buying ? t("report.pdfWait") : t("report.unlock", { price: REPORT_PRICE_CZK })}
                       </button>
                     )}
                     {PAYMENTS_VISIBLE && (

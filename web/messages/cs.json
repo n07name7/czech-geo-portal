@@ -69,8 +69,8 @@
     "loading": "Načítání dat o lokalitě…",
     "noData": "Pro tuto adresu zatím nemáme data (mimo pokrytá města).",
     "overall": "Celkové skóre",
-    "pdfTitle": "Kompletní PDF report",
-    "pdfDesc": "Detailní rozbor lokality se všemi vrstvami, srovnáním a zdroji.",
+    "pdfTitle": "Celý report",
+    "pdfDesc": "Odemkne prémiové kategorie (kvalita škol, ovzduší), srovnání s městem a PDF ke stažení.",
     "pdfDownload": "Stáhnout PDF",
     "pdfWait": "Přesměrování…",
     "pdfBuy": "Koupit PDF za {price} Kč",
@@ -82,6 +82,8 @@
     "quietZone": "tichá zóna",
     "radiusNote": "Počty v okruhu 800 m od adresy (≈10 min chůze); bezpečnost za posledních 12 měsíců. Kvalita SŠ: nejlepší střední škola do 3 km podle percentilu přijímaček (CERMAT).",
     "mapLegend": "Barva okolí = celkové hodnocení lokality (světlejší = lepší)",
-    "percentile": ". percentil"
+    "percentile": ". percentil",
+    "premiumTitle": "Prémiové — v plném reportu",
+    "unlock": "Odemknout celý report za {price} Kč"
   }
 }

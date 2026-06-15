@@ -69,8 +69,8 @@
     "loading": "Loading location data…",
     "noData": "No data for this address yet (outside covered cities).",
     "overall": "Overall score",
-    "pdfTitle": "Full PDF report",
-    "pdfDesc": "Detailed location analysis with all layers, comparison and sources.",
+    "pdfTitle": "Full report",
+    "pdfDesc": "Unlocks premium categories (school quality, air), comparison to the city and a PDF.",
     "pdfDownload": "Download PDF",
     "pdfWait": "Redirecting…",
     "pdfBuy": "Buy PDF for {price} CZK",
@@ -82,6 +82,8 @@
     "quietZone": "quiet zone",
     "radiusNote": "Counts within 800 m of the address (≈10 min walk); safety over the last 12 months. School quality: best secondary school within 3 km by entrance-exam percentile (CERMAT).",
     "mapLegend": "Area colour = overall location rating (brighter = better)",
-    "percentile": " pct"
+    "percentile": " pct",
+    "premiumTitle": "Premium — in the full report",
+    "unlock": "Unlock full report for {price} CZK"
   }
 }
