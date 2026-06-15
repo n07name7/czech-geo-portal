@@ -103,6 +103,10 @@
     "rentTitle": "Nájemné v okolí",
     "rentUnit": "Kč/m²/měs",
     "rentVs": "vs medián · {city}",
-    "rentSource": "Zdroj: MF ČR · cenová mapa nájemného"
+    "rentSource": "Zdroj: MF ČR · cenová mapa nájemného",
+    "isoTitle": "Kam se odsud dostanete",
+    "isoDesc": "Dosah za 10 minut po reálné silniční síti.",
+    "isoWalk": "10 minut pěšky",
+    "isoDrive": "10 minut autem"
   }
 }

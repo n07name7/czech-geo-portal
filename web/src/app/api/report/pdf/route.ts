@@ -91,11 +91,12 @@ function loadFont(name: string): Uint8Array {
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
-  const { address, scores, session, mapImage, cityAvg, cityName, nearby, rent, rentCity, rentQuarter } = body as {
+  const { address, scores, session, mapImage, cityAvg, cityName, nearby, rent, rentCity, rentQuarter, isoWalk, isoDrive } = body as {
     address?: string; scores?: Record<string, number>; session?: string | null;
     mapImage?: string; cityAvg?: Record<string, number>; cityName?: string;
     nearby?: Record<string, { name: string; dist: number; min: number }>;
     rent?: number; rentCity?: number; rentQuarter?: string;
+    isoWalk?: { img: string; area?: number }; isoDrive?: { img: string; area?: number };
   };
 
   if (!(await sessionPaid(session ?? null)))
@@ -336,6 +337,47 @@ export async function POST(req: NextRequest) {
   yy -= 8;
   g2.text("Skóre 0–100 = relativní hodnocení v rámci města. Počty objektů do 800 m od adresy", M, yy, 7.5, font, FAINT);
   g2.text("(kvalita SŠ do 3 km, ovzduší roční průměr PM2.5).", M, yy - 10, 7.5, font, FAINT);
+
+  // ════════════════════════ PAGE 3 — accessibility (10-min reach) ════════════
+  if (isoWalk?.img || isoDrive?.img) {
+    const p3 = doc.addPage([W, H]);
+    p3.drawRectangle({ x: 0, y: 0, width: W, height: H, color: BG });
+    const g3 = mk(p3);
+    g3.text("DOSTUPNOST", M, H - M, 9, bold, ACCENT);
+    g3.text("Kam se dostanete za 10 minut", M, H - M - 20, 16, bold, TEXT);
+    if (cityName) g3.textR(cityName, W - M, H - M - 18, 11, font, MUTED);
+    g3.text("Dosah od adresy po reálné silniční síti (zdroj: OpenStreetMap / Valhalla).", M, H - M - 38, 9, font, MUTED);
+
+    const tileW = W - 2 * M, tileH = 300;
+    const entries = [
+      { data: isoWalk, label: "10 minut pěšky", labelY: 744 },
+      { data: isoDrive, label: "10 minut autem", labelY: 420 },
+    ];
+    for (const e of entries) {
+      const bxT = M, byT = e.labelY - 16 - tileH;
+      p3.drawRectangle({ x: bxT, y: byT, width: tileW, height: tileH, color: CARD, borderColor: LINE, borderWidth: 1 });
+      g3.text(e.label, M, e.labelY, 11, bold, TEXT);
+      if (e.data?.area != null) g3.textR(`≈ ${e.data.area} km² dosažitelných`, W - M, e.labelY, 9, font, MUTED);
+      if (e.data?.img && e.data.img.startsWith("data:image/png")) {
+        try {
+          const png = await doc.embedPng(Buffer.from(e.data.img.split(",")[1], "base64"));
+          const fit = Math.max(tileW / png.width, tileH / png.height);
+          const iw = png.width * fit, ih = png.height * fit;
+          const ix = bxT + (tileW - iw) / 2, iy = byT + (tileH - ih) / 2;
+          p3.pushOperators(pushGraphicsState(), rectangle(bxT, byT, tileW, tileH), clip(), endPath());
+          p3.drawImage(png, { x: ix, y: iy, width: iw, height: ih });
+          p3.pushOperators(popGraphicsState());
+          const mcx = bxT + tileW / 2, mcy = byT + tileH / 2;
+          p3.drawCircle({ x: mcx, y: mcy, size: 10, color: rgb(1, 1, 1), opacity: 0.18 });
+          p3.drawCircle({ x: mcx, y: mcy, size: 5, color: ACCENT, borderColor: rgb(1, 1, 1), borderWidth: 1.8 });
+        } catch { /* skip */ }
+      } else {
+        g3.textC("Nedostupné", bxT + tileW / 2, byT + tileH / 2, 10, font, FAINT);
+      }
+    }
+    g3.text("Izochrona = oblast dosažitelná z adresy ve stanoveném čase. Bod = vaše adresa.", M, 50, 7.5, font, FAINT);
+    g3.textC("kamvcesku.cz  ·  hodnocení na základě otevřených dat", W / 2, 30, 7.5, font, FAINT);
+  }
 
   const bytes = await doc.save();
   return new NextResponse(Buffer.from(bytes), {

@@ -10,6 +10,7 @@ import { geocode, type GeocodeResult } from "@/lib/geocode";
 import { REPORT_PRICE_CZK, PAYMENTS_VISIBLE } from "@/lib/payment";
 
 const ReportMap = dynamic(() => import("@/components/ReportMap"), { ssr: false });
+const IsochroneMap = dynamic(() => import("@/components/IsochroneMap"), { ssr: false });
 
 // Categories behind the paywall — the "how good" depth, vs the free "what's around".
 const PREMIUM_LAYERS = new Set<string>(["highschool", "air"]);
@@ -36,7 +37,10 @@ export default function ReportPage() {
   const [buying, setBuying] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [nearby, setNearby] = useState<Record<string, { name: string; dist: number; min: number }> | null>(null);
+  const [isoArea, setIsoArea] = useState<{ walk?: number; drive?: number }>({});
   const mapImageRef = useRef<string | null>(null);
+  const isoWalkRef = useRef<string | null>(null);
+  const isoDriveRef = useRef<string | null>(null);
   const averagesRef = useRef<Record<string, Record<string, number>> | null>(null);
 
   // city averages for the PDF "vs city" comparison (loaded once)
@@ -52,6 +56,9 @@ export default function ReportPage() {
     if (!selected) { setNearby(null); return; }
     let cancelled = false;
     setNearby(null);
+    isoWalkRef.current = null;
+    isoDriveRef.current = null;
+    setIsoArea({});
     fetch("/api/nearby", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -130,6 +137,8 @@ export default function ReportPage() {
           rent,
           rentCity,
           rentQuarter: rentMeta?.rentQuarter,
+          isoWalk: isoWalkRef.current ? { img: isoWalkRef.current, area: isoArea.walk } : undefined,
+          isoDrive: isoDriveRef.current ? { img: isoDriveRef.current, area: isoArea.drive } : undefined,
         }),
       });
       if (!res.ok) return;
@@ -440,6 +449,37 @@ export default function ReportPage() {
               {!loading && !scores && (
                 <p className="font-body text-sm text-[var(--text-faint)]">{t("report.noData")}</p>
               )}
+            </div>
+          </div>
+        )}
+
+        {selected && scores && (
+          <div className="mt-8">
+            <h2 className="font-display text-xl text-[var(--text)] mb-1">{t("report.isoTitle")}</h2>
+            <p className="font-body text-sm text-[var(--text-muted)] mb-4">{t("report.isoDesc")}</p>
+            <div className="grid sm:grid-cols-2 gap-6">
+              {([["walk", "#52b146"], ["drive", "#5b9bd5"]] as const).map(([mode, color]) => (
+                <div key={`${selected.label}-${mode}`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-body text-sm text-[var(--text)]">
+                      {mode === "walk" ? `🚶 ${t("report.isoWalk")}` : `🚗 ${t("report.isoDrive")}`}
+                    </span>
+                    {isoArea[mode] != null && (
+                      <span className="font-body text-xs text-[var(--text-faint)] tabular-nums">≈ {isoArea[mode]} km²</span>
+                    )}
+                  </div>
+                  <div className="h-64 border border-[var(--border)] overflow-hidden">
+                    <IsochroneMap
+                      lat={selected.lat}
+                      lon={selected.lon}
+                      mode={mode}
+                      color={color}
+                      onImage={(img) => { if (mode === "walk") isoWalkRef.current = img; else isoDriveRef.current = img; }}
+                      onMeta={(m) => setIsoArea((prev) => ({ ...prev, [mode]: m?.areaKm2 }))}
+                    />
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}

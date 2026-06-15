@@ -103,6 +103,10 @@
     "rentTitle": "Rent nearby",
     "rentUnit": "CZK/m²/mo",
     "rentVs": "vs median · {city}",
-    "rentSource": "Source: MF CR · official rent map"
+    "rentSource": "Source: MF CR · official rent map",
+    "isoTitle": "Where you can get from here",
+    "isoDesc": "Reach within 10 minutes along the real street network.",
+    "isoWalk": "10 minutes on foot",
+    "isoDrive": "10 minutes by car"
   }
 }
