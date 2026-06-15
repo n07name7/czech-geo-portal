@@ -19,7 +19,7 @@ from src.fetch.osm import fetch_osm_pois
 from src.fetch.msmt import fetch_msmt_pois
 from src.fetch.nrpzs import fetch_nrpzs_pois
 from src.fetch.gtfs import fetch_gtfs_stops
-from src.fetch.noise import fetch_noise_polygons
+from src.fetch.noise import fetch_noise_polygons, NIGHT_LAYER_IDS
 from src.fetch.crime import fetch_crime_points
 from src.fetch.school_quality import fetch_school_quality
 from src.fetch.air import fetch_air
@@ -325,6 +325,20 @@ def main(dry_run: bool = False, only_city: str | None = None) -> None:
         }))
         print(f"[rent] {len(final_cells)} cells, quarter {final_quarter} "
               f"({'fresh' if rent_cells else 'last-good fallback'})")
+
+    # Night noise (Lnight) per cell — the day value already rides as n_quiet;
+    # this adds the night dB so the report can show the day-vs-night split.
+    for city in cities:
+        try:
+            night = fetch_noise_polygons(city["bbox"], NIGHT_LAYER_IDS)
+        except Exception as e:
+            print(f"[noise-night] {city['name']} ERROR: {e}")
+            continue
+        cells = get_city_cells(city["bbox"], RESOLUTION)
+        for cell, db in cell_max_db(night, cells).items():
+            if cell in combined:
+                combined[cell]["noise_night"] = int(round(db))
+        print(f"[noise-night] {city['name']}: {len(night)} polygons")
 
     # Combined dataset for the weighted "match" mode (every layer score per
     # cell). Only rebuild it when ALL layers succeeded — a partial combined

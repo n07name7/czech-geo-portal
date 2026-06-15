@@ -102,12 +102,13 @@ export async function POST(req: NextRequest) {
     const payload = form?.get("payload");
     if (typeof payload === "string") { try { body = JSON.parse(payload); } catch { /* ignore */ } }
   }
-  const { address, scores, session, mapImage, cityAvg, cityName, nearby, rent, rentCity, rentQuarter, isoWalk, isoDrive } = body as {
+  const { address, scores, session, mapImage, cityAvg, cityName, nearby, rent, rentCity, rentQuarter, isoWalk, isoDrive, flood } = body as {
     address?: string; scores?: Record<string, number>; session?: string | null;
     mapImage?: string; cityAvg?: Record<string, number>; cityName?: string;
     nearby?: Record<string, { name: string; dist: number; min: number }>;
     rent?: number; rentCity?: number; rentQuarter?: string;
     isoWalk?: { img: string; area?: number }; isoDrive?: { img: string; area?: number };
+    flood?: number;
   };
 
   if (!(await sessionPaid(session ?? null)))
@@ -337,6 +338,33 @@ export async function POST(req: NextRequest) {
   p2.drawRectangle({ x: M + 110, y: yy - 4, width: 1.6, height: 11, color: TEXT });
   g2.text("průměr města", M + 120, yy, 8, font, MUTED);
 
+  // environment & risks — day/night noise split + flood hazard
+  const dNoise = Number(scores["n_quiet"]) || 0;
+  const nNoise = Number(scores["noise_night"]) || 0;
+  if (dNoise || nNoise || typeof flood === "number") {
+    yy -= 28;
+    g2.text("PROSTŘEDÍ A RIZIKA", M, yy, 9, bold, ACCENT);
+    yy -= 17;
+    if (dNoise || nNoise) {
+      g2.text("Hluk (den / noc)", M, yy, 9, font, MUTED);
+      g2.text(`${dNoise || "—"} / ${nNoise || "—"} dB`, M + 150, yy, 10, bold, TEXT);
+      yy -= 15;
+    }
+    if (typeof flood === "number") {
+      const FLOOD: [string, RGB][] = [
+        ["mimo mapované povodňové riziko", GOOD],
+        ["nízké povodňové riziko", GOOD],
+        ["střední povodňové riziko", ACCENT],
+        ["vysoké povodňové riziko", BAD],
+        ["velmi vysoké povodňové riziko", BAD],
+      ];
+      const [label, col] = FLOOD[Math.max(0, Math.min(4, flood))];
+      g2.text("Povodňové riziko", M, yy, 9, font, MUTED);
+      g2.text(label + (flood > 0 ? `  (kat. ${flood}/4)` : ""), M + 150, yy, 10, bold, col);
+      yy -= 15;
+    }
+  }
+
   // sources
   yy -= 30;
   g2.text("ZDROJE DAT", M, yy, 9, bold, ACCENT);
@@ -344,6 +372,8 @@ export async function POST(req: NextRequest) {
   const sources = [...SOURCES];
   if (typeof rent === "number" && rent > 0)
     sources.splice(6, 0, `Nájemné: MF ČR – cenová mapa nájemního bydlení${rentQuarter ? ` (${rentQuarter})` : ""}`);
+  if (typeof flood === "number")
+    sources.push("Povodňové riziko: CENIA – povodňové ohrožení 2019 (dir. 2007/60/ES)");
   for (const s of sources) { g2.text("•  " + s, M, yy, 8, font, MUTED); yy -= 12; }
   yy -= 8;
   g2.text("Skóre 0–100 = relativní hodnocení v rámci města. Počty objektů do 800 m od adresy", M, yy, 7.5, font, FAINT);

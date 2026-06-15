@@ -17,6 +17,8 @@ FEATURE_SERVER = (
 # Zeleznice_Ldvn (roads/railways, whole country). Max dB wins per cell,
 # so overlap between layers is harmless.
 LAYER_IDS = [0, 12, 14]
+# Matching night-only (Lnight / "_Ln_2022") layers, for the day-vs-night split.
+NIGHT_LAYER_IDS = [1, 13, 15]
 
 PAGE_SIZE = 2000
 
@@ -80,8 +82,13 @@ def _query_layer(
 
 def fetch_noise_polygons(
     bbox: tuple[float, float, float, float],
+    layer_ids: list[int] | None = None,
 ) -> list[tuple[object, float]]:
-    """Return [(shapely polygon WGS84, representative dB), ...] for bbox."""
+    """Return [(shapely polygon WGS84, representative dB), ...] for bbox.
+
+    Defaults to the Lden (day-evening-night) layers; pass NIGHT_LAYER_IDS for
+    the night-only (Lnight) maps.
+    """
     south, west, north, east = bbox
     x1, y1 = _TO_SJTSK.transform(west, south)
     x2, y2 = _TO_SJTSK.transform(east, north)
@@ -90,6 +97,6 @@ def fetch_noise_polygons(
     envelope = f"{xmin},{ymin},{xmax},{ymax}"
 
     polys: list[tuple[object, float]] = []
-    for layer_id in LAYER_IDS:
+    for layer_id in (layer_ids or LAYER_IDS):
         polys.extend(_query_layer(layer_id, envelope))
     return polys

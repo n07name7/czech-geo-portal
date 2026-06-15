@@ -37,6 +37,7 @@ export default function ReportPage() {
   const [buying, setBuying] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [nearby, setNearby] = useState<Record<string, { name: string; dist: number; min: number }> | null>(null);
+  const [flood, setFlood] = useState<number | null>(null);
   const [isoArea, setIsoArea] = useState<{ walk?: number; drive?: number }>({});
   const mapImageRef = useRef<string | null>(null);
   const isoWalkRef = useRef<string | null>(null);
@@ -53,20 +54,22 @@ export default function ReportPage() {
 
   // named "what's nearby" lookup (live OSM query for this one address)
   useEffect(() => {
-    if (!selected) { setNearby(null); return; }
+    if (!selected) { setNearby(null); setFlood(null); return; }
     let cancelled = false;
     setNearby(null);
+    setFlood(null);
     isoWalkRef.current = null;
     isoDriveRef.current = null;
     setIsoArea({});
-    fetch("/api/nearby", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ lat: selected.lat, lon: selected.lon }),
-    })
+    const coords = JSON.stringify({ lat: selected.lat, lon: selected.lon });
+    fetch("/api/nearby", { method: "POST", headers: { "Content-Type": "application/json" }, body: coords })
       .then((r) => (r.ok ? r.json() : {}))
       .then((d) => { if (!cancelled) setNearby(d ?? {}); })
       .catch(() => { if (!cancelled) setNearby({}); });
+    fetch("/api/flood", { method: "POST", headers: { "Content-Type": "application/json" }, body: coords })
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((d: { category?: number }) => { if (!cancelled) setFlood(typeof d?.category === "number" ? d.category : null); })
+      .catch(() => { if (!cancelled) setFlood(null); });
     return () => { cancelled = true; };
   }, [selected]);
 
@@ -139,6 +142,7 @@ export default function ReportPage() {
       rentQuarter: rentMeta?.rentQuarter,
       isoWalk: isoWalkRef.current ? { img: isoWalkRef.current, area: isoArea.walk } : undefined,
       isoDrive: isoDriveRef.current ? { img: isoDriveRef.current, area: isoArea.drive } : undefined,
+      flood: flood ?? undefined,
     };
 
     let sink = document.getElementById("pdf-sink") as HTMLIFrameElement | null;
