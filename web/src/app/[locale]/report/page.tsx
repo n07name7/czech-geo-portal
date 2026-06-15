@@ -38,6 +38,7 @@ export default function ReportPage() {
   const [downloading, setDownloading] = useState(false);
   const [nearby, setNearby] = useState<Record<string, { name: string; dist: number; min: number }> | null>(null);
   const [flood, setFlood] = useState<number | null>(null);
+  const [extrasLoading, setExtrasLoading] = useState(false);
   const [isoArea, setIsoArea] = useState<{ walk?: number; drive?: number }>({});
   const mapImageRef = useRef<string | null>(null);
   const isoWalkRef = useRef<string | null>(null);
@@ -61,15 +62,19 @@ export default function ReportPage() {
     isoWalkRef.current = null;
     isoDriveRef.current = null;
     setIsoArea({});
+    setExtrasLoading(true);
     const coords = JSON.stringify({ lat: selected.lat, lon: selected.lon });
-    fetch("/api/nearby", { method: "POST", headers: { "Content-Type": "application/json" }, body: coords })
+    const pNearby = fetch("/api/nearby", { method: "POST", headers: { "Content-Type": "application/json" }, body: coords })
       .then((r) => (r.ok ? r.json() : {}))
       .then((d) => { if (!cancelled) setNearby(d ?? {}); })
       .catch(() => { if (!cancelled) setNearby({}); });
-    fetch("/api/flood", { method: "POST", headers: { "Content-Type": "application/json" }, body: coords })
+    const pFlood = fetch("/api/flood", { method: "POST", headers: { "Content-Type": "application/json" }, body: coords })
       .then((r) => (r.ok ? r.json() : {}))
       .then((d: { category?: number }) => { if (!cancelled) setFlood(typeof d?.category === "number" ? d.category : null); })
       .catch(() => { if (!cancelled) setFlood(null); });
+    // Gate the PDF button until the live lookups (slow Overpass call) finish, so
+    // the report never downloads with a half-empty "what's nearby" section.
+    Promise.allSettled([pNearby, pFlood]).then(() => { if (!cancelled) setExtrasLoading(false); });
     return () => { cancelled = true; };
   }, [selected]);
 
@@ -383,17 +388,18 @@ export default function ReportPage() {
                       // Payments not active yet — offer the PDF as a free preview
                       <button
                         onClick={downloadPdf}
-                        disabled={downloading}
+                        disabled={downloading || extrasLoading}
                         className="px-4 py-2 text-xs font-body uppercase tracking-[0.16em] bg-[var(--accent)] text-[#0b0d12] hover:opacity-90 transition-opacity disabled:opacity-50"
                       >
-                        {downloading ? t("report.pdfWait") : t("report.pdfFree")}
+                        {extrasLoading ? t("report.pdfPreparing") : downloading ? t("report.pdfWait") : t("report.pdfFree")}
                       </button>
                     ) : paidSession ? (
                       <button
                         onClick={downloadPdf}
-                        className="px-4 py-2 text-xs font-body uppercase tracking-[0.16em] bg-[var(--accent)] text-[#0b0d12] hover:opacity-90 transition-opacity"
+                        disabled={downloading || extrasLoading}
+                        className="px-4 py-2 text-xs font-body uppercase tracking-[0.16em] bg-[var(--accent)] text-[#0b0d12] hover:opacity-90 transition-opacity disabled:opacity-50"
                       >
-                        {t("report.pdfDownload")}
+                        {extrasLoading ? t("report.pdfPreparing") : t("report.pdfDownload")}
                       </button>
                     ) : (
                       <button

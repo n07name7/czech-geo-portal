@@ -107,6 +107,7 @@
     "isoTitle": "Where you can get from here",
     "isoDesc": "Reach within 10 minutes along the real street network.",
     "isoWalk": "10 minutes on foot",
-    "isoDrive": "10 minutes by car"
+    "isoDrive": "10 minutes by car",
+    "pdfPreparing": "Preparing data…"
   }
 }
