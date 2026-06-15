@@ -352,17 +352,22 @@ export async function POST(req: NextRequest) {
     }
     if (typeof flood === "number") {
       const FLOOD: [string, RGB][] = [
-        ["mimo mapované povodňové riziko", GOOD],
-        ["nízké povodňové riziko", GOOD],
-        ["střední povodňové riziko", ACCENT],
-        ["vysoké povodňové riziko", BAD],
-        ["velmi vysoké povodňové riziko", BAD],
+        ["mimo záplavové území", GOOD],
+        ["nízké", GOOD],
+        ["střední", ACCENT],
+        ["vysoké", BAD],
+        ["velmi vysoké", BAD],
       ];
       const [label, col] = FLOOD[Math.max(0, Math.min(4, flood))];
-      g2.text("Povodňové riziko", M, yy, 9, font, MUTED);
+      g2.text("Povodňové riziko (řeky)", M, yy, 9, font, MUTED);
       g2.text(label + (flood > 0 ? `  (kat. ${flood}/4)` : ""), M + 150, yy, 10, bold, col);
       yy -= 15;
     }
+  }
+  // honest scope note: the national hazard map is fluvial (river) flooding only
+  if (typeof flood === "number") {
+    g2.text("Týká se rozlivů řek; přívalové (bleskové) povodně z přívalových srážek nezahrnuje.", M, yy, 7, font, FAINT);
+    yy -= 13;
   }
 
   // sources
