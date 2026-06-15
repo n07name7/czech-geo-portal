@@ -181,7 +181,9 @@ export default function ReportPage() {
       .sort((a, b) => b.value - a.value);
   }, [scores, t]);
 
-  const unlocked = !!paidSession;
+  // Premium is open to everyone while payments aren't active yet (preview era);
+  // once Stripe keys are set (PAYMENTS_VISIBLE), it locks behind a purchase.
+  const unlocked = !!paidSession || !PAYMENTS_VISIBLE;
   const freeRows = ranked.filter((r) => !PREMIUM_LAYERS.has(r.id));
   const premiumRows = ranked.filter((r) => PREMIUM_LAYERS.has(r.id));
 
@@ -283,7 +285,7 @@ export default function ReportPage() {
                   {premiumRows.length > 0 && (
                     <div className="mb-6 border-t border-[var(--border)] pt-3">
                       <p className="text-[9px] font-body uppercase tracking-[0.18em] text-[var(--accent)] mb-2.5">
-                        {t("report.premiumTitle")}
+                        {!PAYMENTS_VISIBLE ? t("report.premiumFree") : t("report.premiumTitle")}
                       </p>
                       <div className="space-y-2.5">
                         {premiumRows.map((r) => (

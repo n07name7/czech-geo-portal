@@ -86,6 +86,7 @@
     "percentile": ". percentil",
     "premiumTitle": "Prémiové — v plném reportu",
     "unlock": "Odemknout celý report za {price} Kč",
-    "pdfFree": "Stáhnout PDF (zdarma, náhled)"
+    "pdfFree": "Stáhnout PDF (zdarma, náhled)",
+    "premiumFree": "Prémiové — nyní zdarma (beta)"
   }
 }

@@ -86,6 +86,7 @@
     "percentile": " pct",
     "premiumTitle": "Premium — in the full report",
     "unlock": "Unlock full report for {price} CZK",
-    "pdfFree": "Download PDF (free preview)"
+    "pdfFree": "Download PDF (free preview)",
+    "premiumFree": "Premium — free for now (beta)"
   }
 }
