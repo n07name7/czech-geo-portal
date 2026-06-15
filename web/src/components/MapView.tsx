@@ -258,6 +258,25 @@ function attachAllLayers(
   if (boundary) attachBoundaryLayers(map, boundary);
 }
 
+/** Apply the current overlay visibility (single active layer vs match, and the
+ *  hide-hexagons toggle). Called after every (re)attach — a basemap switch
+ *  reloads the style and re-adds layers visible by default. */
+function applyOverlayVisibility(
+  map: maplibregl.Map,
+  activeLayer: LayerId,
+  matchMode: boolean,
+  hexVisible: boolean,
+) {
+  for (const layer of LAYERS) {
+    const vis = hexVisible && !matchMode && layer.id === activeLayer ? "visible" : "none";
+    if (map.getLayer(`${layer.id}-fill`)) map.setLayoutProperty(`${layer.id}-fill`, "visibility", vis);
+    if (map.getLayer(`${layer.id}-highlight`)) map.setLayoutProperty(`${layer.id}-highlight`, "visibility", vis);
+  }
+  const matchVis = hexVisible && matchMode ? "visible" : "none";
+  if (map.getLayer("combined-fill")) map.setLayoutProperty("combined-fill", "visibility", matchVis);
+  if (map.getLayer("combined-highlight")) map.setLayoutProperty("combined-highlight", "visibility", matchVis);
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function MapView({ activeLayer, basemap, activeCity, basemapId, matchMode, weights, measureLabel, ratingLabel, hexVisible }: Props) {
@@ -550,31 +569,18 @@ export default function MapView({ activeLayer, basemap, activeCity, basemapId, m
     basemapRef.current = basemap;
     map.once("style.load", () => {
       attachAllLayers(map, activeLayerRef.current, boundaryRef.current, basemapIdRef.current, matchModeRef.current, weightsRef.current);
+      // style reload re-adds layers visible by default → re-apply current state
+      applyOverlayVisibility(map, activeLayerRef.current, matchModeRef.current, hexVisibleRef.current);
     });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     map.setStyle(basemap as any);
   }, [basemap]);
 
-  // Layer visibility (single-layer vs match mode)
+  // Layer visibility (single-layer vs match mode, and the hide-hexagons toggle)
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
-    for (const layer of LAYERS) {
-      const vis = hexVisible && !matchMode && layer.id === activeLayer ? "visible" : "none";
-      if (map.getLayer(`${layer.id}-fill`)) {
-        map.setLayoutProperty(`${layer.id}-fill`, "visibility", vis);
-      }
-      if (map.getLayer(`${layer.id}-highlight`)) {
-        map.setLayoutProperty(`${layer.id}-highlight`, "visibility", vis);
-      }
-    }
-    const matchVis = hexVisible && matchMode ? "visible" : "none";
-    if (map.getLayer("combined-fill")) {
-      map.setLayoutProperty("combined-fill", "visibility", matchVis);
-    }
-    if (map.getLayer("combined-highlight")) {
-      map.setLayoutProperty("combined-highlight", "visibility", matchVis);
-    }
+    applyOverlayVisibility(map, activeLayer, matchMode, hexVisible);
     if (!hexVisible && popupRef.current) popupRef.current.remove();
   }, [activeLayer, matchMode, hexVisible]);
 
