@@ -240,7 +240,9 @@ export default function ReportPage() {
   // Premium is open to everyone while payments aren't active yet (preview era);
   // once Stripe keys are set (PAYMENTS_VISIBLE), it locks behind a purchase.
   const unlocked = !!paidSession || !PAYMENTS_VISIBLE;
-  const freeRows = ranked.filter((r) => !PREMIUM_LAYERS.has(r.id));
+  // "quiet" (noise) is PDF-only now — shown there in detail (day/night). It's
+  // still in `scores`, so the PDF and overall score are unaffected.
+  const freeRows = ranked.filter((r) => !PREMIUM_LAYERS.has(r.id) && r.id !== "quiet");
   const premiumRows = ranked.filter((r) => PREMIUM_LAYERS.has(r.id));
 
   return (
