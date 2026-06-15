@@ -108,6 +108,9 @@
     "isoDesc": "Reach within 10 minutes along the real street network.",
     "isoWalk": "10 minutes on foot",
     "isoDrive": "10 minutes by car",
-    "pdfPreparing": "Preparing data…"
+    "pdfPreparing": "Preparing data…",
+    "pickOpen": "📍 Or pick a spot on the map",
+    "pickHide": "Hide map",
+    "pickHint": "Click the map to choose a spot (no address needed)."
   }
 }

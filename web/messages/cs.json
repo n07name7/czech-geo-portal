@@ -108,6 +108,9 @@
     "isoDesc": "Dosah za 10 minut po reálné silniční síti.",
     "isoWalk": "10 minut pěšky",
     "isoDrive": "10 minut autem",
-    "pdfPreparing": "Připravuji data…"
+    "pdfPreparing": "Připravuji data…",
+    "pickOpen": "📍 Nebo vyberte místo na mapě",
+    "pickHide": "Skrýt mapu",
+    "pickHint": "Klikněte do mapy pro výběr místa (i bez adresy)."
   }
 }

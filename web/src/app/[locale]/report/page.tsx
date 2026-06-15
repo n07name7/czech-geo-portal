@@ -6,11 +6,12 @@ import { useTranslations, useLocale } from "next-intl";
 import NavBar from "@/components/NavBar";
 import { LAYERS, COMBINED_URL } from "@/lib/layers";
 import { CITIES } from "@/lib/cities";
-import { geocode, type GeocodeResult } from "@/lib/geocode";
+import { geocode, reverseGeocode, type GeocodeResult } from "@/lib/geocode";
 import { REPORT_PRICE_CZK, PAYMENTS_VISIBLE } from "@/lib/payment";
 
 const ReportMap = dynamic(() => import("@/components/ReportMap"), { ssr: false });
 const IsochroneMap = dynamic(() => import("@/components/IsochroneMap"), { ssr: false });
+const PickMap = dynamic(() => import("@/components/PickMap"), { ssr: false });
 
 // Categories behind the paywall — the "how good" depth, vs the free "what's around".
 const PREMIUM_LAYERS = new Set<string>(["highschool", "air"]);
@@ -30,6 +31,7 @@ export default function ReportPage() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<GeocodeResult[]>([]);
   const [open, setOpen] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
   const [selected, setSelected] = useState<GeocodeResult | null>(null);
   const [scores, setScores] = useState<Record<string, number> | null>(null);
   const [loading, setLoading] = useState(false);
@@ -198,6 +200,14 @@ export default function ReportPage() {
     setLoading(true);
   };
 
+  // Point chosen by clicking the map → reverse-geocode for a label, then run
+  // the exact same report pipeline as an address search.
+  const handlePick = (lat: number, lon: number) => {
+    setLoading(true);
+    setScores(null);
+    reverseGeocode(lat, lon).then((r) => select(r));
+  };
+
   // ReportMap resolves with scores or null (outside coverage / timeout);
   // either way the lookup is done.
   const handleScores = (s: Record<string, number> | null) => {
@@ -282,7 +292,23 @@ export default function ReportPage() {
           )}
         </div>
 
-        {!selected && (
+        {/* Or pick a point on the map */}
+        <button
+          onClick={() => setShowPicker((v) => !v)}
+          className="-mt-4 mb-6 text-xs font-body text-[var(--text-muted)] hover:text-[var(--accent)] underline underline-offset-2 transition-colors"
+        >
+          {showPicker ? t("report.pickHide") : t("report.pickOpen")}
+        </button>
+        {showPicker && (
+          <div className="mb-8">
+            <p className="text-[11px] font-body text-[var(--text-faint)] mb-2">{t("report.pickHint")}</p>
+            <div className="h-80 border border-[var(--border)] overflow-hidden">
+              <PickMap lat={selected?.lat} lon={selected?.lon} onPick={handlePick} />
+            </div>
+          </div>
+        )}
+
+        {!selected && !showPicker && (
           <p className="font-body text-sm text-[var(--text-faint)]">{t("report.hint")}</p>
         )}
 

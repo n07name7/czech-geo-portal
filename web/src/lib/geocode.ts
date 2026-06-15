@@ -21,6 +21,23 @@ function formatLabel(p: Record<string, unknown>): string {
   return parts.join(", ") || String(p.name ?? "");
 }
 
+// Reverse: a clicked map point → a human label (keeps the exact clicked
+// coordinates, only borrows the nearest address text for display).
+export async function reverseGeocode(lat: number, lon: number): Promise<GeocodeResult> {
+  const fallback = { label: `${lat.toFixed(5)}, ${lon.toFixed(5)}`, lat, lon };
+  try {
+    const res = await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}&lang=default`);
+    if (!res.ok) return fallback;
+    const data = await res.json();
+    const f = data.features?.[0];
+    if (!f) return fallback;
+    const p = f.properties ?? {};
+    return { label: formatLabel(p) || fallback.label, lat, lon, city: p.city };
+  } catch {
+    return fallback;
+  }
+}
+
 export async function geocode(
   query: string,
   bias: [number, number] = PRAGUE,
