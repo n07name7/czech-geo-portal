@@ -91,9 +91,10 @@ function loadFont(name: string): Uint8Array {
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
-  const { address, scores, session, mapImage, cityAvg, cityName } = body as {
+  const { address, scores, session, mapImage, cityAvg, cityName, nearby } = body as {
     address?: string; scores?: Record<string, number>; session?: string | null;
     mapImage?: string; cityAvg?: Record<string, number>; cityName?: string;
+    nearby?: Record<string, { name: string; dist: number; min: number }>;
   };
 
   if (!(await sessionPaid(session ?? null)))
@@ -240,6 +241,29 @@ export async function POST(req: NextRequest) {
   const listTop = gy - gr - 64;
   const after = drawList("SILNÉ STRÁNKY", ranked.slice(0, 3), GOOD, listTop);
   drawList("SLABÉ STRÁNKY", ranked.slice(-3).reverse(), BAD, after - 14);
+
+  // ── nearest named places (full-width band, bottom of page) ─────────────────
+  const NEAR_LABELS: Record<string, string> = {
+    transit: "MHD zastávka", supermarket: "Supermarket", pharmacy: "Lékárna",
+    health: "Lékař / nemocnice", school: "Základní škola", park: "Park",
+  };
+  const nearOrder = ["transit", "supermarket", "pharmacy", "health", "school", "park"]
+    .filter((c) => nearby && nearby[c]);
+  if (nearby && nearOrder.length) {
+    const nbTop = 168;
+    p1.drawLine({ start: { x: M, y: nbTop + 10 }, end: { x: W - M, y: nbTop + 10 }, thickness: 0.5, color: LINE });
+    g1.text("NEJBLIŽŠÍ V OKOLÍ", M, nbTop - 4, 8, bold, ACCENT);
+    const colW = (W - 2 * M) / 2;
+    nearOrder.forEach((c, i) => {
+      const p = nearby[c];
+      const col = i % 2, row = Math.floor(i / 2);
+      const x = M + col * colW, ry = nbTop - 26 - row * 30;
+      g1.text(NEAR_LABELS[c], x, ry, 7, bold, FAINT);
+      g1.text(p.name.length > 30 ? p.name.slice(0, 29) + "…" : p.name, x, ry - 12, 10, font, TEXT);
+      g1.textR(`${p.dist} m`, x + colW - 16, ry - 2, 9, bold, TEXT);
+      g1.textR(`${p.min} min`, x + colW - 16, ry - 12, 7.5, font, MUTED);
+    });
+  }
 
   g1.textC("kamvcesku.cz  ·  hodnocení na základě otevřených dat", W / 2, 30, 7.5, font, FAINT);
 

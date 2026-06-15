@@ -87,6 +87,18 @@
     "premiumTitle": "Premium — in the full report",
     "unlock": "Unlock full report for {price} CZK",
     "pdfFree": "Download PDF (free preview)",
-    "premiumFree": "Premium — free for now (beta)"
+    "premiumFree": "Premium — free for now (beta)",
+    "nearbyTitle": "What's nearby",
+    "nearbyDesc": "Closest named places from the address (walking).",
+    "nearWalk": "min walk",
+    "nearNone": "none within range",
+    "nearCat": {
+      "supermarket": "Supermarket",
+      "pharmacy": "Pharmacy",
+      "health": "Doctor / hospital",
+      "school": "Primary school",
+      "transit": "Transit stop",
+      "park": "Park"
+    }
   }
 }

@@ -87,6 +87,18 @@
     "premiumTitle": "Prémiové — v plném reportu",
     "unlock": "Odemknout celý report za {price} Kč",
     "pdfFree": "Stáhnout PDF (zdarma, náhled)",
-    "premiumFree": "Prémiové — nyní zdarma (beta)"
+    "premiumFree": "Prémiové — nyní zdarma (beta)",
+    "nearbyTitle": "Co máte v okolí",
+    "nearbyDesc": "Nejbližší konkrétní místa od adresy (chůze).",
+    "nearWalk": "min pěšky",
+    "nearNone": "v dosahu nenalezeno",
+    "nearCat": {
+      "supermarket": "Supermarket",
+      "pharmacy": "Lékárna",
+      "health": "Lékař / nemocnice",
+      "school": "Základní škola",
+      "transit": "MHD zastávka",
+      "park": "Park"
+    }
   }
 }

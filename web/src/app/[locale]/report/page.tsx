@@ -35,6 +35,7 @@ export default function ReportPage() {
   const [paidSession, setPaidSession] = useState<string | null>(null);
   const [buying, setBuying] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [nearby, setNearby] = useState<Record<string, { name: string; dist: number; min: number }> | null>(null);
   const mapImageRef = useRef<string | null>(null);
   const averagesRef = useRef<Record<string, Record<string, number>> | null>(null);
 
@@ -45,6 +46,22 @@ export default function ReportPage() {
       .then((d) => { averagesRef.current = d; })
       .catch(() => {});
   }, []);
+
+  // named "what's nearby" lookup (live OSM query for this one address)
+  useEffect(() => {
+    if (!selected) { setNearby(null); return; }
+    let cancelled = false;
+    setNearby(null);
+    fetch("/api/nearby", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lat: selected.lat, lon: selected.lon }),
+    })
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((d) => { if (!cancelled) setNearby(d ?? {}); })
+      .catch(() => { if (!cancelled) setNearby({}); });
+    return () => { cancelled = true; };
+  }, [selected]);
 
   const nearestCity = useMemo(() => {
     if (!selected) return null;
@@ -109,6 +126,7 @@ export default function ReportPage() {
           mapImage: mapImageRef.current,
           cityAvg,
           cityName: nearestCity?.name,
+          nearby,
         }),
       });
       if (!res.ok) return;
@@ -307,6 +325,36 @@ export default function ReportPage() {
                             </span>
                           </div>
                         ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* What's nearby — named places with walking distance */}
+                  {nearby && Object.keys(nearby).length > 0 && (
+                    <div className="mb-6 border-t border-[var(--border)] pt-3">
+                      <p className="text-[9px] font-body uppercase tracking-[0.18em] text-[var(--text-faint)] mb-2.5">
+                        {t("report.nearbyTitle")}
+                      </p>
+                      <div className="space-y-2">
+                        {(["transit", "supermarket", "pharmacy", "health", "school", "park"] as const)
+                          .filter((c) => nearby[c])
+                          .map((c) => {
+                            const icon = { transit: "🚊", supermarket: "🛒", pharmacy: "💊", health: "🏥", school: "🏫", park: "🌳" }[c];
+                            const p = nearby[c];
+                            return (
+                              <div key={c} className="flex items-center gap-3">
+                                <span className="w-5 text-center text-sm">{icon}</span>
+                                <span className="flex-1 min-w-0">
+                                  <span className="block text-[12px] font-body text-[var(--text)] truncate">{p.name}</span>
+                                  <span className="block text-[10px] font-body text-[var(--text-faint)]">{t(`report.nearCat.${c}`)}</span>
+                                </span>
+                                <span className="text-right whitespace-nowrap">
+                                  <span className="block text-[12px] font-body text-[var(--text)] tabular-nums">{p.dist} m</span>
+                                  <span className="block text-[10px] font-body text-[var(--text-faint)] tabular-nums">{p.min} {t("report.nearWalk")}</span>
+                                </span>
+                              </div>
+                            );
+                          })}
                       </div>
                     </div>
                   )}
