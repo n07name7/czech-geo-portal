@@ -153,6 +153,13 @@ export default async function LandingPage() {
               <span className="text-base leading-none">→</span>
             </Link>
             <Link
+              href={`/${locale}/report`}
+              className="inline-flex items-center gap-2 border border-[var(--accent)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-[#0b0d12] font-body font-semibold text-sm px-6 py-3 rounded-none transition-colors"
+            >
+              <ReportLabel />
+              <span className="text-base leading-none">→</span>
+            </Link>
+            <Link
               href={`/${locale}/methodology`}
               className="inline-flex items-center gap-2 border border-[var(--border)] hover:border-[var(--accent)] text-[var(--text-muted)] hover:text-[var(--accent)] font-body text-sm px-6 py-3 rounded-none transition-colors"
             >
@@ -271,6 +278,11 @@ function StatSource() {
 function CtaLabel() {
   const t = useTranslations("landing");
   return <>{t("cta")}</>;
+}
+
+function ReportLabel() {
+  const t = useTranslations("landing");
+  return <>{t("ctaReport")}</>;
 }
 
 function MetodLabel() {

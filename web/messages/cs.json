@@ -4,7 +4,9 @@
     "layers": "Vrstvy",
     "match": "Podle mě",
     "matchHint": "Nastavte důležitost a najděte nejlepší čtvrť pro vás.",
-    "reset": "Resetovat"
+    "reset": "Resetovat",
+    "openPanel": "Otevřít panel",
+    "closePanel": "Zavřít panel"
   },
   "legend": {
     "low": "horší",
@@ -45,7 +47,8 @@
     "step3Desc": "Zadej konkrétní adresu a získej hodnocení jejího okolí.",
     "eyebrow": "Kvalita bydlení",
     "statSource": "Veřejná data ČR",
-    "statLayers": "{count} vrstev dat"
+    "statLayers": "{count} vrstev dat",
+    "ctaReport": "Report podle adresy"
   },
   "methodology": {
     "title": "Metodologie",

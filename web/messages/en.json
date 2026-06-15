@@ -4,7 +4,9 @@
     "layers": "Layers",
     "match": "Match me",
     "matchHint": "Set what matters and find the best neighborhood for you.",
-    "reset": "Reset"
+    "reset": "Reset",
+    "openPanel": "Open panel",
+    "closePanel": "Close panel"
   },
   "legend": {
     "low": "worse",
@@ -45,7 +47,8 @@
     "step3Desc": "Enter a specific address and get a rating of its surroundings.",
     "eyebrow": "Quality of living",
     "statSource": "Czech public data",
-    "statLayers": "{count} data layers"
+    "statLayers": "{count} data layers",
+    "ctaReport": "Address report"
   },
   "methodology": {
     "title": "Methodology",

@@ -15,6 +15,11 @@ const DATA_SOURCES = [
   { layer: "Bezpečnost", source: "Mapa kriminality, Policie ČR (12 měsíců)", freq: "Týdně" },
   { layer: "Kvalita SŠ", source: "Přijímací zkoušky CERMAT + Rejstřík škol MŠMT", freq: "Ročně" },
   { layer: "Kvalita ovzduší", source: "Pětileté průměry PM2.5, ČHMÚ (1×1 km)", freq: "Ročně" },
+  { layer: "Nájemné", source: "Cenová mapa nájemního bydlení, MF ČR (CC BY 4.0)", freq: "Čtvrtletně" },
+  { layer: "Hluk den / noc", source: "Strategické hlukové mapy 2022 (Lden/Lnight), MZ ČR", freq: "Týdně" },
+  { layer: "Povodňové riziko", source: "Povodňové ohrožení 2019, CENIA (dir. 2007/60/ES)", freq: "Dle aktualizace" },
+  { layer: "Dostupnost (pěšky/autem)", source: "Silniční síť OpenStreetMap (Valhalla)", freq: "Live" },
+  { layer: "Co je v okolí / rizika", source: "OpenStreetMap (ODbL)", freq: "Live" },
 ];
 
 const SCORING_STEPS = [

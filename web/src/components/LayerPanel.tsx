@@ -131,13 +131,18 @@ export default function LayerPanel({
         </div>
       </div>
 
-      {/* Toggle button — larger tap target on mobile */}
+      {/* Toggle button — clearly labelled & tappable, esp. on mobile */}
       <button
         onClick={onToggle}
-        className="relative z-20 mt-3 bg-[var(--surface)] border border-l-0 border-[var(--border)] flex items-center justify-center w-6 py-4 text-[var(--text-muted)] hover:text-[var(--accent)] hover:bg-[var(--card)] active:bg-[var(--card)] transition-colors touch-manipulation"
-        aria-label={collapsed ? "Otevřít panel" : "Zavřít panel"}
+        className="relative z-20 mt-3 bg-[var(--surface)] border border-l-0 border-[var(--border)] rounded-r-md shadow-lg flex items-center gap-1.5 pl-2.5 pr-3 py-2.5 text-[var(--text-muted)] hover:text-[var(--accent)] hover:bg-[var(--card)] active:bg-[var(--card)] transition-colors touch-manipulation"
+        aria-label={collapsed ? t("ui.openPanel") : t("ui.closePanel")}
       >
-        <span className="text-xs leading-none">{collapsed ? "›" : "‹"}</span>
+        <span className="text-sm leading-none">{collapsed ? "☰" : "‹"}</span>
+        {collapsed && (
+          <span className="text-[10px] font-body font-medium uppercase tracking-[0.16em] leading-none">
+            {matchMode ? t("ui.match") : t("ui.layers")}
+          </span>
+        )}
       </button>
     </div>
   );
