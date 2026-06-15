@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { readFileSync } from "fs";
 import { join } from "path";
-import { PDFDocument, rgb, type PDFFont, type PDFPage, type RGB } from "pdf-lib";
+import { PDFDocument, rgb, pushGraphicsState, popGraphicsState, rectangle, clip, endPath, type PDFFont, type PDFPage, type RGB } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import { PAYMENTS_LIVE, stripeSecret } from "@/lib/payment";
 
@@ -146,37 +146,56 @@ export async function POST(req: NextRequest) {
 
   let y = H - 96;
 
-  // ── gauge (overall) + verdict ──────────────────────────────────────────────
-  const gx = M + 60, gy = y - 84, gr = 46;
-  g1.arc(gx, gy, gr, 220, -40, 9, LINE);                       // track
-  g1.arc(gx, gy, gr, 220, 220 - 260 * overall, 9, scoreColor(overall)); // value
-  g1.textC(String(Math.round(overall * 100)), gx, gy - 6, 34, bold, TEXT);
-  g1.textC("/ 100", gx, gy - 24, 9, font, MUTED);
-  g1.text(verdict(overall), M, gy - gr - 26, 13, bold, TEXT);
-  g1.text("Celkové skóre okolí" + (cityName ? ` · v rámci města ${cityName}` : ""),
-    M, gy - gr - 42, 9, font, MUTED);
-
-  // ── neighborhood map ───────────────────────────────────────────────────────
-  const mapW = 250, mapH = 150, mapX = W - M - mapW, mapTop = y - 22;
+  // ── neighborhood map — full-width banner, fills edge-to-edge (cover-fit) ────
+  const bx = M, bw = W - 2 * M, bTop = y - 14, bh = 250, bBot = bTop - bh;
+  p1.drawRectangle({ x: bx, y: bBot, width: bw, height: bh, color: CARD, borderColor: LINE, borderWidth: 1 });
   if (typeof mapImage === "string" && mapImage.startsWith("data:image/png")) {
     try {
       const png = await doc.embedPng(Buffer.from(mapImage.split(",")[1], "base64"));
-      p1.drawImage(png, { x: mapX, y: mapTop - mapH, width: mapW, height: mapH });
-      p1.drawCircle({ x: mapX + mapW / 2, y: mapTop - mapH / 2, size: 4.5, color: ACCENT, borderColor: rgb(1, 1, 1), borderWidth: 1.5 });
-      p1.drawRectangle({ x: mapX, y: mapTop - mapH, width: mapW, height: mapH, borderColor: LINE, borderWidth: 1 });
-      g1.text("OKOLÍ ADRESY", mapX, mapTop + 6, 8, bold, FAINT);
+      // cover-fit: scale so the image fills the whole banner, crop the overflow
+      const fit = Math.max(bw / png.width, bh / png.height);
+      const iw = png.width * fit, ih = png.height * fit;
+      const ix = bx + (bw - iw) / 2, iy = bBot + (bh - ih) / 2;
+      // clip to the banner so the overflow doesn't spill onto the page
+      p1.pushOperators(pushGraphicsState(), rectangle(bx, bBot, bw, bh), clip(), endPath());
+      p1.drawImage(png, { x: ix, y: iy, width: iw, height: ih });
+      p1.pushOperators(popGraphicsState());
+      // address marker dead-center of the banner
+      const mcx = bx + bw / 2, mcy = bBot + bh / 2;
+      p1.drawCircle({ x: mcx, y: mcy, size: 11, color: rgb(1, 1, 1), opacity: 0.18 });
+      p1.drawCircle({ x: mcx, y: mcy, size: 5.5, color: ACCENT, borderColor: rgb(1, 1, 1), borderWidth: 2 });
     } catch { /* skip */ }
   }
+  // legend chip overlaid on the map (bottom-left)
+  const legColors = [scoreColor(0.15), scoreColor(0.5), scoreColor(0.9)];
+  const lgX = bx + 12, lgY = bBot + 12;
+  p1.drawRectangle({ x: lgX - 6, y: lgY - 6, width: 150, height: 26, color: rgb(0.04, 0.05, 0.07), opacity: 0.82 });
+  g1.text("hůř", lgX, lgY + 6, 7, font, MUTED);
+  const swX = lgX + 22;
+  legColors.forEach((c, i) => p1.drawRectangle({ x: swX + i * 11, y: lgY + 6, width: 11, height: 7, color: c }));
+  g1.text("lépe", swX + 3 * 11 + 4, lgY + 6, 7, font, MUTED);
+  g1.text("celkové hodnocení okolí", lgX, lgY - 3, 6.5, font, FAINT);
+  g1.text("OKOLÍ ADRESY", bx + 10, bTop - 14, 8, bold, rgb(1, 1, 1));
 
-  y = Math.min(gy - gr - 56, mapTop - mapH) - 30;
+  y = bTop - bh - 24;
 
-  // ── radar (theme profile) ──────────────────────────────────────────────────
+  // ── gauge (overall) + verdict (left) ───────────────────────────────────────
+  const gx = M + 48, gy = y - 50, gr = 42;
+  g1.arc(gx, gy, gr, 220, -40, 8, LINE);
+  g1.arc(gx, gy, gr, 220, 220 - 260 * overall, 8, scoreColor(overall));
+  g1.textC(String(Math.round(overall * 100)), gx, gy - 5, 30, bold, TEXT);
+  g1.textC("/ 100", gx, gy - 21, 8, font, MUTED);
+  g1.text(verdict(overall), M, gy - gr - 24, 13, bold, TEXT);
+  g1.text("Celkové skóre okolí" + (cityName ? ` · ${cityName}` : ""),
+    M, gy - gr - 40, 9, font, MUTED);
+
+  // ── radar (theme profile) — right of gauge ─────────────────────────────────
   const themes = GROUPS.map((grp) => {
     const ms = grp.ids.filter((id) => id in scores);
     const v = ms.length ? ms.reduce((a, id) => a + (Number(scores[id]) || 0), 0) / ms.length : 0;
     return { title: grp.title, v };
   });
-  const rcx = M + 130, rcy = y - 120, rr = 92;
+  const rcx = W - M - 96, rcy = y - 116, rr = 84;
   const N = themes.length;
   const ang = (i: number) => (90 - (360 / N) * i) * Math.PI / 180;
   // grid rings
@@ -203,22 +222,23 @@ export async function POST(req: NextRequest) {
     p1.drawLine({ start: { x: a[0], y: a[1] }, end: { x: b[0], y: b[1] }, thickness: 1.8, color: ACCENT });
   }
   pts.forEach((p) => p1.drawCircle({ x: p[0], y: p[1], size: 2.2, color: ACCENT }));
-  g1.text("PROFIL LOKALITY", rcx - rr, rcy + rr + 26, 8, bold, FAINT);
 
-  // ── strengths / weaknesses cards (right of radar) ──────────────────────────
+  // ── strengths / weaknesses (left column, below the gauge) ──────────────────
   const ranked = ids.map((k) => ({ k, v: Number(scores[k]) || 0 })).sort((a, b) => b.v - a.v);
-  const cardX = rcx + rr + 50, cardTop = y - 18;
+  const cardX = M;
+  const cardRight = M + 210;
   const drawList = (title: string, items: { k: string; v: number }[], col: RGB, yTop: number) => {
     g1.text(title, cardX, yTop, 9, bold, col);
     let yy = yTop - 16;
     for (const it of items) {
       g1.text(LAYER_LABELS[it.k], cardX + 10, yy, 9, font, TEXT);
-      g1.textR(`${Math.round(it.v * 100)}`, W - M, yy, 9, font, col);
+      g1.textR(`${Math.round(it.v * 100)}`, cardRight, yy, 9, font, col);
       yy -= 14;
     }
     return yy;
   };
-  const after = drawList("SILNÉ STRÁNKY", ranked.slice(0, 3), GOOD, cardTop);
+  const listTop = gy - gr - 64;
+  const after = drawList("SILNÉ STRÁNKY", ranked.slice(0, 3), GOOD, listTop);
   drawList("SLABÉ STRÁNKY", ranked.slice(-3).reverse(), BAD, after - 14);
 
   g1.textC("kamvcesku.cz  ·  hodnocení na základě otevřených dat", W / 2, 30, 7.5, font, FAINT);
