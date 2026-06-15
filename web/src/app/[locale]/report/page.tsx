@@ -40,6 +40,7 @@ export default function ReportPage() {
   const [downloading, setDownloading] = useState(false);
   const [nearby, setNearby] = useState<Record<string, { name: string; dist: number; min: number }> | null>(null);
   const [flood, setFlood] = useState<number | null>(null);
+  const [flags, setFlags] = useState<Record<string, { dist: number }> | null>(null);
   const [extrasLoading, setExtrasLoading] = useState(false);
   const [isoArea, setIsoArea] = useState<{ walk?: number; drive?: number }>({});
   const mapImageRef = useRef<string | null>(null);
@@ -57,10 +58,11 @@ export default function ReportPage() {
 
   // named "what's nearby" lookup (live OSM query for this one address)
   useEffect(() => {
-    if (!selected) { setNearby(null); setFlood(null); return; }
+    if (!selected) { setNearby(null); setFlood(null); setFlags(null); return; }
     let cancelled = false;
     setNearby(null);
     setFlood(null);
+    setFlags(null);
     isoWalkRef.current = null;
     isoDriveRef.current = null;
     setIsoArea({});
@@ -74,9 +76,13 @@ export default function ReportPage() {
       .then((r) => (r.ok ? r.json() : {}))
       .then((d: { category?: number }) => { if (!cancelled) setFlood(typeof d?.category === "number" ? d.category : null); })
       .catch(() => { if (!cancelled) setFlood(null); });
-    // Gate the PDF button until the live lookups (slow Overpass call) finish, so
-    // the report never downloads with a half-empty "what's nearby" section.
-    Promise.allSettled([pNearby, pFlood]).then(() => { if (!cancelled) setExtrasLoading(false); });
+    const pFlags = fetch("/api/flags", { method: "POST", headers: { "Content-Type": "application/json" }, body: coords })
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((d) => { if (!cancelled) setFlags(d ?? {}); })
+      .catch(() => { if (!cancelled) setFlags({}); });
+    // Gate the PDF button until the live lookups (slow Overpass calls) finish, so
+    // the report never downloads with a half-empty section.
+    Promise.allSettled([pNearby, pFlood, pFlags]).then(() => { if (!cancelled) setExtrasLoading(false); });
     return () => { cancelled = true; };
   }, [selected]);
 
@@ -150,6 +156,7 @@ export default function ReportPage() {
       isoWalk: isoWalkRef.current ? { img: isoWalkRef.current, area: isoArea.walk } : undefined,
       isoDrive: isoDriveRef.current ? { img: isoDriveRef.current, area: isoArea.drive } : undefined,
       flood: flood ?? undefined,
+      flags: flags ?? undefined,
     };
 
     let sink = document.getElementById("pdf-sink") as HTMLIFrameElement | null;

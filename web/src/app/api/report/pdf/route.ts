@@ -102,13 +102,14 @@ export async function POST(req: NextRequest) {
     const payload = form?.get("payload");
     if (typeof payload === "string") { try { body = JSON.parse(payload); } catch { /* ignore */ } }
   }
-  const { address, scores, session, mapImage, cityAvg, cityName, nearby, rent, rentCity, rentQuarter, isoWalk, isoDrive, flood } = body as {
+  const { address, scores, session, mapImage, cityAvg, cityName, nearby, rent, rentCity, rentQuarter, isoWalk, isoDrive, flood, flags } = body as {
     address?: string; scores?: Record<string, number>; session?: string | null;
     mapImage?: string; cityAvg?: Record<string, number>; cityName?: string;
     nearby?: Record<string, { name: string; dist: number; min: number }>;
     rent?: number; rentCity?: number; rentQuarter?: string;
     isoWalk?: { img: string; area?: number }; isoDrive?: { img: string; area?: number };
     flood?: number;
+    flags?: Record<string, { dist: number }>;
   };
 
   if (!(await sessionPaid(session ?? null)))
@@ -269,27 +270,54 @@ export async function POST(req: NextRequest) {
   const after = drawList("SILNÉ STRÁNKY", ranked.slice(0, 3), GOOD, listTop);
   drawList("SLABÉ STRÁNKY", ranked.slice(-3).reverse(), BAD, after - 14);
 
-  // ── nearest named places (full-width band, bottom of page) ─────────────────
+  // ── pros & cons spread (full-width band, bottom of page) ───────────────────
   const NEAR_LABELS: Record<string, string> = {
     transit: "MHD zastávka", supermarket: "Supermarket", pharmacy: "Lékárna",
     health: "Lékař / nemocnice", school: "Základní škola", park: "Park",
   };
-  const nearOrder = ["transit", "supermarket", "pharmacy", "health", "school", "park"]
-    .filter((c) => nearby && nearby[c]);
-  if (nearby && nearOrder.length) {
-    const nbTop = 168;
-    p1.drawLine({ start: { x: M, y: nbTop + 10 }, end: { x: W - M, y: nbTop + 10 }, thickness: 0.5, color: LINE });
-    g1.text("NEJBLIŽŠÍ V OKOLÍ", M, nbTop - 4, 8, bold, ACCENT);
+  const FLAG_DEF: Record<string, [string, string]> = {
+    road: ["Rušná silnice", "doprava · hluk"],
+    railway: ["Železnice", "hluk · vibrace"],
+    gambling: ["Herna / sázení", "v okolí"],
+    nightclub: ["Noční klub", "noční hluk"],
+    industrial: ["Průmyslová zóna", "průmysl · doprava"],
+  };
+  const pros = ["transit", "supermarket", "pharmacy", "health", "school", "park"]
+    .filter((c) => nearby && nearby[c]).slice(0, 5);
+  const cons = Object.entries(flags || {})
+    .filter(([k]) => k in FLAG_DEF)
+    .map(([k, v]) => ({ k, dist: v.dist }))
+    .sort((a, b) => a.dist - b.dist).slice(0, 5);
+
+  if (pros.length || cons.length || flags) {
     const colW = (W - 2 * M) / 2;
-    nearOrder.forEach((c, i) => {
-      const p = nearby[c];
-      const col = i % 2, row = Math.floor(i / 2);
-      const x = M + col * colW, ry = nbTop - 26 - row * 30;
-      g1.text(NEAR_LABELS[c], x, ry, 7, bold, FAINT);
-      g1.text(p.name.length > 30 ? p.name.slice(0, 29) + "…" : p.name, x, ry - 12, 10, font, TEXT);
-      g1.textR(`${p.dist} m`, x + colW - 16, ry - 2, 9, bold, TEXT);
-      g1.textR(`${p.min} min`, x + colW - 16, ry - 12, 7.5, font, MUTED);
+    const nbTop = 166, rowStep = 23;
+    p1.drawLine({ start: { x: M, y: nbTop + 12 }, end: { x: W - M, y: nbTop + 12 }, thickness: 0.5, color: LINE });
+    g1.text("CO TU JE", M, nbTop, 8, bold, GOOD);
+    g1.text("NA CO POZOR", M + colW, nbTop, 8, bold, BAD);
+
+    pros.forEach((c, i) => {
+      const p = nearby![c];
+      const ry = nbTop - 22 - i * rowStep;
+      g1.text(p.name.length > 26 ? p.name.slice(0, 25) + "…" : p.name, M, ry, 9.5, font, TEXT);
+      g1.text(NEAR_LABELS[c], M, ry - 11, 7, font, FAINT);
+      g1.textR(`${p.dist} m`, M + colW - 16, ry, 9, bold, TEXT);
     });
+
+    const cx = M + colW;
+    if (cons.length) {
+      cons.forEach((f, i) => {
+        const [label, sub] = FLAG_DEF[f.k];
+        const ry = nbTop - 22 - i * rowStep;
+        const col = f.dist < 100 ? BAD : ACCENT;
+        g1.text(label, cx, ry, 9.5, font, col);
+        g1.text(sub, cx, ry - 11, 7, font, FAINT);
+        g1.textR(`${f.dist} m`, cx + colW - 16, ry, 9, bold, col);
+      });
+    } else if (flags) {
+      g1.text("Žádná zjevná rizika v okolí", cx, nbTop - 22, 9.5, font, GOOD);
+      g1.text("bez rušné silnice, železnice, heren…", cx, nbTop - 33, 7, font, FAINT);
+    }
   }
 
   g1.textC("kamvcesku.cz  ·  hodnocení na základě otevřených dat", W / 2, 30, 7.5, font, FAINT);
