@@ -195,7 +195,6 @@ export default function ReportPage() {
     ? (averagesRef.current?.[nearestCity.id] as Record<string, number> | undefined)?.rent
     : undefined;
   const rentMeta = (averagesRef.current as unknown as { _meta?: { rentQuarter?: string } } | null)?._meta;
-  const rentDiff = rent && rentCity ? Math.round(((rent - rentCity) / rentCity) * 100) : null;
 
   // Concrete metric per layer. The 800 m radius is stated once above the
   // list, so rows stay compact: bare count for POIs, dB for noise,
@@ -297,28 +296,8 @@ export default function ReportPage() {
                     </div>
                   </div>
 
-                  {/* Rent level for the cadastral area (official MF ČR map) */}
-                  {rent && (
-                    <div className="mb-6 border border-[var(--accent)] border-opacity-30 bg-[var(--card)] px-4 py-3">
-                      <div className="flex items-baseline justify-between gap-3">
-                        <div>
-                          <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-faint)] font-body">{t("report.rentTitle")}</div>
-                          <div className="font-display text-2xl text-[var(--text)] leading-tight">≈ {rent} <span className="text-base text-[var(--text-muted)]">{t("report.rentUnit")}</span></div>
-                        </div>
-                        {rentDiff !== null && (
-                          <div className="text-right">
-                            <div className="text-base font-body tabular-nums" style={{ color: rentDiff > 0 ? "#e5564b" : "#52b146" }}>
-                              {rentDiff > 0 ? "+" : ""}{rentDiff}%
-                            </div>
-                            <div className="text-[10px] text-[var(--text-faint)] font-body">{t("report.rentVs", { city: nearestCity?.name ?? "" })}</div>
-                          </div>
-                        )}
-                      </div>
-                      {rentMeta?.rentQuarter && (
-                        <div className="mt-1.5 text-[9px] text-[var(--text-faint)] font-body">{t("report.rentSource")} · {rentMeta.rentQuarter}</div>
-                      )}
-                    </div>
-                  )}
+                  {/* Rent level is PDF-only — values are still computed below
+                      and passed to the PDF, just not shown on the web page. */}
 
                   {/* Per-category rows: concrete number + score bar */}
                   <p className="text-[10px] font-body text-[var(--text-faint)] mb-2">
