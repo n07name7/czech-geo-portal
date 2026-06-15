@@ -9,6 +9,7 @@ Run:
 Fetches POIs for 8 Czech cities, scores H3 cells per city,
 combines into one PMTiles file per layer covering all cities.
 """
+import json
 import os
 import sys
 from pathlib import Path
@@ -22,7 +23,7 @@ from src.fetch.noise import fetch_noise_polygons
 from src.fetch.crime import fetch_crime_points
 from src.fetch.school_quality import fetch_school_quality
 from src.fetch.air import fetch_air
-from src.fetch.rent import fetch_rent
+from src.fetch.rent import fetch_rent, load_mf_rent
 from src.score.h3_scorer import get_city_cells, score_cells, count_cells
 from src.score.rent_scorer import score_cells_rent
 from src.score.noise_scorer import score_cells_quiet, cell_max_db
@@ -106,6 +107,22 @@ LAYERS: list[dict] = [
     # air layer: PM2.5 5-year average; score inverted (clean = 1), metric = µg/m³
     {"name": "air",           "fetcher": fetch_air, "kind": "air"},
 ]
+
+
+def load_prev_rent(tag: str = "data-latest") -> dict:
+    """Last good rent.json from the release, so a source outage or format
+    change never silently drops prices from the site."""
+    import requests as req
+    repo = os.environ.get("GITHUB_REPOSITORY", "n07name7/czech-geo-portal")
+    url = f"https://github.com/{repo}/releases/download/{tag}/rent.json"
+    try:
+        r = req.get(url, timeout=600)
+        if r.status_code == 200 and r.content:
+            return r.json()
+        print(f"  no previous rent.json (HTTP {r.status_code})")
+    except Exception as e:
+        print(f"  load previous rent.json failed: {e}")
+    return {}
 
 
 def backfill_from_release(filenames: list[str], tag: str = "data-latest") -> None:
@@ -260,29 +277,54 @@ def main(dry_run: bool = False, only_city: str | None = None) -> None:
         print(f"  {out.stat().st_size // 1024} KB\n")
 
     # Rent level per cell (CZK/m²) from MF ČR cenová mapa joined to k.ú.
-    # polygons. Informational, not a scored layer — failure just omits it
-    # (the report hides the price block) and never blocks the combined build.
+    # polygons. Informational, not a scored layer. To make sure a MF outage or
+    # format change never silently drops prices, fresh values are overlaid on
+    # the last good rent.json from the release — a failed source keeps the
+    # previous prices instead of vanishing.
+    RENT_SOURCE = "MF ČR – cenová mapa nájemního bydlení"
+    prev_rent = load_prev_rent()
+    rent_cells: dict[str, int] = {}
+    rent_cities: dict[str, int] = {}
     rent_quarter: str | None = None
-    for city in cities:
-        try:
-            areas, rent_quarter = fetch_rent(city["bbox"])
-            print(f"[rent] {city['name']}: {len(areas)} k.ú. with rent")
-        except Exception as e:
-            print(f"[rent] {city['name']} ERROR: {e}")
-            continue
-        cells = get_city_cells(city["bbox"], RESOLUTION)
-        cell_rent = score_cells_rent(areas, cells)
-        for cell, rent in cell_rent.items():
+    try:
+        _, rent_quarter = load_mf_rent()
+        mf_ok = True
+    except Exception as e:
+        print(f"[rent] MF cenová mapa unavailable ({e}) — using last good prices")
+        mf_ok = False
+    if mf_ok:
+        for city in cities:
+            try:
+                areas, rent_quarter = fetch_rent(city["bbox"])
+            except Exception as e:
+                print(f"[rent] {city['name']} ERROR: {e}")
+                continue
+            cell_rent = score_cells_rent(areas, get_city_cells(city["bbox"], RESOLUTION))
+            rent_cells.update(cell_rent)
+            vals = sorted(cell_rent.values())
+            if vals:
+                rent_cities[city["id"]] = vals[len(vals) // 2]
+            print(f"[rent] {city['name']}: {len(areas)} k.ú., {len(cell_rent)} cells")
+
+    # Overlay fresh on last good (string cell keys merge cleanly).
+    final_cells = {**prev_rent.get("cells", {}), **rent_cells}
+    final_cities = {**prev_rent.get("cities", {}), **rent_cities}
+    final_quarter = rent_quarter or (prev_rent.get("meta") or {}).get("rentQuarter")
+    if final_cells:
+        for cell, rent in final_cells.items():
             if cell in combined:
                 combined[cell]["rent"] = rent
-        vals = sorted(cell_rent.values())
-        if vals:
-            city_avgs[city["id"]]["rent"] = vals[len(vals) // 2]
-    if rent_quarter:
-        city_avgs["_meta"] = {
-            "rentQuarter": rent_quarter,
-            "rentSource": "MF ČR – cenová mapa nájemního bydlení",
-        }
+        for cid, med in final_cities.items():
+            if cid in city_avgs:
+                city_avgs[cid]["rent"] = med
+        if final_quarter:
+            city_avgs["_meta"] = {"rentQuarter": final_quarter, "rentSource": RENT_SOURCE}
+        (OUTPUT_DIR / "rent.json").write_text(json.dumps({
+            "cells": final_cells, "cities": final_cities,
+            "meta": {"rentQuarter": final_quarter, "rentSource": RENT_SOURCE},
+        }))
+        print(f"[rent] {len(final_cells)} cells, quarter {final_quarter} "
+              f"({'fresh' if rent_cells else 'last-good fallback'})")
 
     # Combined dataset for the weighted "match" mode (every layer score per
     # cell). Only rebuild it when ALL layers succeeded — a partial combined
@@ -313,7 +355,8 @@ def main(dry_run: bool = False, only_city: str | None = None) -> None:
         # release, dropping anything not re-uploaded).
         backfill = [f"{n}.pmtiles" for n in failed_layers]
         if failed_layers:
-            backfill += ["combined.pmtiles", "averages.json"]
+            # keep rent.json in sync with the combined we're keeping
+            backfill += ["combined.pmtiles", "averages.json", "rent.json"]
         if backfill:
             print(f"\nBackfilling from previous release: {backfill}")
             backfill_from_release(backfill)
@@ -324,6 +367,9 @@ def main(dry_run: bool = False, only_city: str | None = None) -> None:
                  if (OUTPUT_DIR / f"{n}.pmtiles").exists()]
         if avg_path.exists():
             files.append(avg_path)
+        rent_path = OUTPUT_DIR / "rent.json"
+        if rent_path.exists():
+            files.append(rent_path)
         upload_to_github_release(files)
         print("Upload complete.")
 
