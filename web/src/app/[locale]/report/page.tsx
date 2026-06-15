@@ -351,6 +351,7 @@ export default function ReportPage() {
                         {t("report.overall")}
                       </div>
                       <div className="text-xs text-[var(--text-muted)] font-body">/ 100</div>
+                      <div className="text-[10px] text-[var(--text-faint)] font-body">{t("report.scoreCtx")}</div>
                     </div>
                   </div>
 
@@ -416,7 +417,15 @@ export default function ReportPage() {
                   {/* PDF purchase / download */}
                   <div className="border border-[var(--accent)] border-opacity-40 p-4 bg-[var(--card)]">
                     <p className="font-body text-sm text-[var(--text)] mb-1">{t("report.pdfTitle")}</p>
-                    <p className="font-body text-xs text-[var(--text-muted)] mb-3">{t("report.pdfDesc")}</p>
+                    <p className="font-body text-xs text-[var(--text-muted)] mb-2.5">{t("report.pdfDesc")}</p>
+                    <ul className="mb-4 space-y-1.5">
+                      {(["rent", "nearby", "reach", "flags", "env", "city"] as const).map((k) => (
+                        <li key={k} className="flex items-start gap-2 text-[11px] font-body text-[var(--text-muted)] leading-snug">
+                          <span className="text-[var(--accent)] leading-none mt-[1px]">✓</span>
+                          <span>{t(`report.feat.${k}`)}</span>
+                        </li>
+                      ))}
+                    </ul>
                     {!PAYMENTS_VISIBLE ? (
                       // Payments not active yet — offer the PDF as a free preview
                       <button

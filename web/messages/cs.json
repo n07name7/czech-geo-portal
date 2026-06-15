@@ -74,7 +74,7 @@
     "noData": "Pro tuto adresu zatím nemáme data (mimo pokrytá města).",
     "overall": "Celkové skóre",
     "pdfTitle": "Celý report",
-    "pdfDesc": "Odemkne prémiové kategorie (kvalita škol, ovzduší), srovnání s městem a PDF ke stažení.",
+    "pdfDesc": "Kompletní PDF report navíc obsahuje:",
     "pdfDownload": "Stáhnout PDF",
     "pdfWait": "Přesměrování…",
     "pdfBuy": "Koupit PDF za {price} Kč",
@@ -114,6 +114,15 @@
     "pdfPreparing": "Připravuji data…",
     "pickOpen": "📍 Nebo vyberte místo na mapě",
     "pickHide": "Skrýt mapu",
-    "pickHint": "Klikněte do mapy pro výběr místa (i bez adresy)."
+    "pickHint": "Klikněte do mapy pro výběr místa (i bez adresy).",
+    "scoreCtx": "relativně v rámci města",
+    "feat": {
+      "rent": "Nájemné v okolí (Kč/m²) + srovnání s městem",
+      "nearby": "Co máte v okolí — obchody, MHD, škola… s docházkou",
+      "reach": "Mapy dostupnosti — kam dojdete za 10 min pěšky i autem",
+      "flags": "Na co si dát pozor — rušná silnice, herna, železnice…",
+      "env": "Povodňové riziko + hluk ve dne i v noci",
+      "city": "Srovnání všech kategorií s průměrem města"
+    }
   }
 }

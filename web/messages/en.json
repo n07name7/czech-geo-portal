@@ -74,7 +74,7 @@
     "noData": "No data for this address yet (outside covered cities).",
     "overall": "Overall score",
     "pdfTitle": "Full report",
-    "pdfDesc": "Unlocks premium categories (school quality, air), comparison to the city and a PDF.",
+    "pdfDesc": "The full PDF report also includes:",
     "pdfDownload": "Download PDF",
     "pdfWait": "Redirecting…",
     "pdfBuy": "Buy PDF for {price} CZK",
@@ -114,6 +114,15 @@
     "pdfPreparing": "Preparing data…",
     "pickOpen": "📍 Or pick a spot on the map",
     "pickHide": "Hide map",
-    "pickHint": "Click the map to choose a spot (no address needed)."
+    "pickHint": "Click the map to choose a spot (no address needed).",
+    "scoreCtx": "relative to the city",
+    "feat": {
+      "rent": "Local rent (CZK/m²) + comparison to the city",
+      "nearby": "What's nearby — shops, transit, school… with walking time",
+      "reach": "Reach maps — where you get in 10 min on foot & by car",
+      "flags": "Watch-outs — busy road, gambling hall, railway…",
+      "env": "Flood risk + day & night noise",
+      "city": "Every category vs the city average"
+    }
   }
 }
