@@ -71,17 +71,17 @@ function SourcesSection() {
   return (
     <section className="space-y-6">
       <h2 className="font-display text-2xl text-[var(--text)]">{t("sourcesTitle")}</h2>
-      <div className="border border-[var(--border)]">
-        <table className="w-full text-sm font-body">
+      <div className="border border-[var(--border)] overflow-x-auto">
+        <table className="w-full text-[13px] sm:text-sm font-body">
           <thead>
             <tr className="border-b border-[var(--border)]">
-              <th className="text-left px-5 py-3 text-[10px] tracking-[0.2em] uppercase text-[var(--text-muted)] font-medium">
+              <th className="text-left px-3 sm:px-5 py-3 text-[10px] tracking-[0.2em] uppercase text-[var(--text-muted)] font-medium">
                 Vrstva
               </th>
-              <th className="text-left px-5 py-3 text-[10px] tracking-[0.2em] uppercase text-[var(--text-muted)] font-medium">
+              <th className="text-left px-3 sm:px-5 py-3 text-[10px] tracking-[0.2em] uppercase text-[var(--text-muted)] font-medium">
                 Zdroj
               </th>
-              <th className="text-left px-5 py-3 text-[10px] tracking-[0.2em] uppercase text-[var(--text-muted)] font-medium">
+              <th className="text-left px-3 sm:px-5 py-3 text-[10px] tracking-[0.2em] uppercase text-[var(--text-muted)] font-medium">
                 Aktualizace
               </th>
             </tr>
@@ -94,9 +94,9 @@ function SourcesSection() {
                   i % 2 === 0 ? "bg-[var(--card)]" : "bg-[var(--surface)]"
                 }`}
               >
-                <td className="px-5 py-3 text-[var(--text)]">{row.layer}</td>
-                <td className="px-5 py-3 text-[var(--text-muted)]">{row.source}</td>
-                <td className="px-5 py-3 text-[var(--text-muted)]">{row.freq}</td>
+                <td className="px-3 sm:px-5 py-3 text-[var(--text)]">{row.layer}</td>
+                <td className="px-3 sm:px-5 py-3 text-[var(--text-muted)]">{row.source}</td>
+                <td className="px-3 sm:px-5 py-3 text-[var(--text-muted)]">{row.freq}</td>
               </tr>
             ))}
           </tbody>
