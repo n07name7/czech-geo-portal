@@ -13,6 +13,7 @@ on:
 
 permissions:
   contents: write
+  actions: write   # to re-trigger the Deploy workflow after publishing data
 
 jobs:
   etl:
@@ -42,3 +43,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: python main.py
+
+      # New data is published — redeploy the web app so its cache-bust id
+      # changes and visitors fetch the fresh tiles instead of stale cache.
+      - name: Re-deploy web (refresh data cache)
+        run: |
+          curl -sS -X POST \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/deploy.yml/dispatches" \
+            -d '{"ref":"master"}'
