@@ -373,35 +373,8 @@ export default function ReportPage() {
                     </div>
                   )}
 
-                  {/* What's nearby — named places with walking distance */}
-                  {nearby && Object.keys(nearby).length > 0 && (
-                    <div className="mb-6 border-t border-[var(--border)] pt-3">
-                      <p className="text-[9px] font-body uppercase tracking-[0.18em] text-[var(--text-faint)] mb-2.5">
-                        {t("report.nearbyTitle")}
-                      </p>
-                      <div className="space-y-2">
-                        {(["transit", "supermarket", "pharmacy", "health", "school", "park"] as const)
-                          .filter((c) => nearby[c])
-                          .map((c) => {
-                            const icon = { transit: "🚊", supermarket: "🛒", pharmacy: "💊", health: "🏥", school: "🏫", park: "🌳" }[c];
-                            const p = nearby[c];
-                            return (
-                              <div key={c} className="flex items-center gap-3">
-                                <span className="w-5 text-center text-sm">{icon}</span>
-                                <span className="flex-1 min-w-0">
-                                  <span className="block text-[12px] font-body text-[var(--text)] truncate">{p.name}</span>
-                                  <span className="block text-[10px] font-body text-[var(--text-faint)]">{t(`report.nearCat.${c}`)}</span>
-                                </span>
-                                <span className="text-right whitespace-nowrap">
-                                  <span className="block text-[12px] font-body text-[var(--text)] tabular-nums">{p.dist} m</span>
-                                  <span className="block text-[10px] font-body text-[var(--text-faint)] tabular-nums">{p.min} {t("report.nearWalk")}</span>
-                                </span>
-                              </div>
-                            );
-                          })}
-                      </div>
-                    </div>
-                  )}
+                  {/* "Co máte v okolí" and the reach maps are PDF-only — the
+                      data is still fetched/captured below and passed to the PDF. */}
 
                   {/* PDF purchase / download */}
                   <div className="border border-[var(--accent)] border-opacity-40 p-4 bg-[var(--card)]">
@@ -453,34 +426,22 @@ export default function ReportPage() {
           </div>
         )}
 
+        {/* Reach maps render off-screen only to capture PNGs for the PDF —
+            they are intentionally not shown on the web page. */}
         {selected && scores && (
-          <div className="mt-8">
-            <h2 className="font-display text-xl text-[var(--text)] mb-1">{t("report.isoTitle")}</h2>
-            <p className="font-body text-sm text-[var(--text-muted)] mb-4">{t("report.isoDesc")}</p>
-            <div className="grid sm:grid-cols-2 gap-6">
-              {([["walk", "#52b146"], ["drive", "#5b9bd5"]] as const).map(([mode, color]) => (
-                <div key={`${selected.label}-${mode}`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-body text-sm text-[var(--text)]">
-                      {mode === "walk" ? `🚶 ${t("report.isoWalk")}` : `🚗 ${t("report.isoDrive")}`}
-                    </span>
-                    {isoArea[mode] != null && (
-                      <span className="font-body text-xs text-[var(--text-faint)] tabular-nums">≈ {isoArea[mode]} km²</span>
-                    )}
-                  </div>
-                  <div className="h-64 border border-[var(--border)] overflow-hidden">
-                    <IsochroneMap
-                      lat={selected.lat}
-                      lon={selected.lon}
-                      mode={mode}
-                      color={color}
-                      onImage={(img) => { if (mode === "walk") isoWalkRef.current = img; else isoDriveRef.current = img; }}
-                      onMeta={(m) => setIsoArea((prev) => ({ ...prev, [mode]: m?.areaKm2 }))}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div aria-hidden style={{ position: "absolute", left: -10000, top: 0, pointerEvents: "none" }}>
+            {([["walk", "#52b146"], ["drive", "#5b9bd5"]] as const).map(([mode, color]) => (
+              <div key={`${selected.label}-${mode}`} style={{ width: 560, height: 320 }}>
+                <IsochroneMap
+                  lat={selected.lat}
+                  lon={selected.lon}
+                  mode={mode}
+                  color={color}
+                  onImage={(img) => { if (mode === "walk") isoWalkRef.current = img; else isoDriveRef.current = img; }}
+                  onMeta={(m) => setIsoArea((prev) => ({ ...prev, [mode]: m?.areaKm2 }))}
+                />
+              </div>
+            ))}
           </div>
         )}
       </div>
