@@ -106,25 +106,24 @@ LAYERS: list[dict] = [
 ]
 
 
-def backfill_missing_from_release(layer_names: list[str], tag: str = "data-latest") -> None:
-    """Download last good PMTiles for layers that produced nothing this run.
+def backfill_from_release(filenames: list[str], tag: str = "data-latest") -> None:
+    """Download last good assets for things that weren't produced this run.
 
-    On a fresh CI checkout the local file is gone, so a skipped layer would
-    vanish from the recreated release. Pull its previous asset first.
+    The upload recreates the release, so anything not re-uploaded vanishes.
+    Pull the previous copy first (filenames include extension).
     """
     import requests as req
     repo = os.environ.get("GITHUB_REPOSITORY", "n07name7/czech-geo-portal")
     base = f"https://github.com/{repo}/releases/download/{tag}"
-    for name in layer_names:
-        dest = OUTPUT_DIR / f"{name}.pmtiles"
+    for name in filenames:
+        dest = OUTPUT_DIR / name
         try:
-            r = req.get(f"{base}/{name}.pmtiles", timeout=600)
+            r = req.get(f"{base}/{name}", timeout=600)
             if r.status_code == 200 and r.content:
                 dest.write_bytes(r.content)
-                print(f"  backfilled {name}.pmtiles from previous release "
-                      f"({len(r.content)//1024} KB)")
+                print(f"  backfilled {name} ({len(r.content)//1024} KB)")
             else:
-                print(f"  no previous {name}.pmtiles to backfill (HTTP {r.status_code})")
+                print(f"  no previous {name} to backfill (HTTP {r.status_code})")
         except req.RequestException as e:
             print(f"  backfill {name} failed: {e}")
 
@@ -167,7 +166,9 @@ def upload_to_github_release(files: list[Path], tag: str = "data-latest") -> Non
         "prerelease": True,
     })
     r.raise_for_status()
-    upload_url = r.json()["upload_url"].split("{")[0]
+    created = r.json()
+    upload_url = created["upload_url"].split("{")[0]
+    release_id = created["id"]
 
     for path in files:
         print(f"  uploading {path.name}...")
@@ -179,6 +180,12 @@ def upload_to_github_release(files: list[Path], tag: str = "data-latest") -> Non
             )
             r.raise_for_status()
         print(f"  done -> github:{tag}/{path.name}")
+
+    # Ensure it's published — creating a release right after deleting the tag
+    # can leave it as a draft, whose assets 404 on the public download URL.
+    req.patch(f"{api}/repos/{repo}/releases/{release_id}",
+              headers=headers, json={"draft": False})
+    print("  release published")
 
 
 def main(dry_run: bool = False, only_city: str | None = None) -> None:
@@ -275,13 +282,14 @@ def main(dry_run: bool = False, only_city: str | None = None) -> None:
 
     if not dry_run:
         # On a partial run, restore the previous combined/averages too, so the
-        # published data stays internally consistent.
-        backfill = list(failed_layers)
+        # published data stays internally consistent (the upload recreates the
+        # release, dropping anything not re-uploaded).
+        backfill = [f"{n}.pmtiles" for n in failed_layers]
         if failed_layers:
-            backfill += ["combined"]
+            backfill += ["combined.pmtiles", "averages.json"]
         if backfill:
             print(f"\nBackfilling from previous release: {backfill}")
-            backfill_missing_from_release(backfill)
+            backfill_from_release(backfill)
 
         print("\nUploading to GitHub Releases...")
         names = [l["name"] for l in LAYERS] + ["combined"]
