@@ -80,15 +80,15 @@ export default function MapPage() {
       />
       <BasemapSwitcher activeBasemap={activeBasemap} onChange={setActiveBasemap} />
 
-      {/* Hide / show the hexagon overlay */}
+      {/* Hide / show the hexagon overlay — sits just above the basemap switcher */}
       <button
         onClick={() => setHexVisible((v) => !v)}
-        className="absolute left-0 z-20 flex items-center gap-1.5 bg-[var(--surface)] border border-l-0 border-[var(--border)] rounded-r-md shadow-lg pl-2.5 pr-3 py-2 text-[var(--text-muted)] hover:text-[var(--accent)] hover:bg-[var(--card)] transition-colors touch-manipulation"
-        style={{ top: 104 }}
+        className="absolute right-4 z-10 flex items-center gap-1.5 bg-[var(--surface)] border border-[var(--border)] px-3 py-1.5 text-[var(--text-muted)] hover:text-[var(--accent)] hover:bg-[var(--card)] transition-colors touch-manipulation"
+        style={{ bottom: "calc(2.5rem + env(safe-area-inset-bottom, 0px) + 86px)" }}
         aria-pressed={!hexVisible}
       >
-        <span className="text-sm leading-none">⬡</span>
-        <span className="text-[10px] font-body font-medium uppercase tracking-[0.16em] leading-none">
+        <span className="text-xs leading-none">⬡</span>
+        <span className="text-[10px] font-body font-medium uppercase tracking-widest leading-none">
           {hexVisible ? t("ui.hideHex") : t("ui.showHex")}
         </span>
       </button>
