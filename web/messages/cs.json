@@ -85,6 +85,7 @@
     "mapLegend": "Barva okolí = celkové hodnocení lokality (světlejší = lepší)",
     "percentile": ". percentil",
     "premiumTitle": "Prémiové — v plném reportu",
-    "unlock": "Odemknout celý report za {price} Kč"
+    "unlock": "Odemknout celý report za {price} Kč",
+    "pdfFree": "Stáhnout PDF (zdarma, náhled)"
   }
 }

@@ -192,6 +192,8 @@ def main(dry_run: bool = False, only_city: str | None = None) -> None:
     failed_layers: list[str] = []
     # cell -> {layer_name: score} accumulated across layers for the combined file
     combined: dict[str, dict[str, float]] = {}
+    # per-city per-layer mean score, for the PDF "vs city average" comparison
+    city_avgs: dict[str, dict[str, float]] = {c["id"]: {} for c in cities}
     for layer in LAYERS:
         layer_name = layer["name"]
         all_scores: dict[str, float] = {}
@@ -227,6 +229,8 @@ def main(dry_run: bool = False, only_city: str | None = None) -> None:
                 if layer.get("invert"):
                     scores = {c: 1.0 - v for c, v in scores.items()}
             all_scores.update(scores)
+            if scores:
+                city_avgs[city["id"]][layer_name] = round(sum(scores.values()) / len(scores), 3)
             print(f"  {len(cells)} cells scored")
 
         # A source outage must not wipe a layer: skip the build and keep
@@ -253,6 +257,12 @@ def main(dry_run: bool = False, only_city: str | None = None) -> None:
         build_combined_pmtiles(combined, out)
         print(f"  {out.stat().st_size // 1024} KB\n")
 
+    # City averages for the PDF comparison
+    import json as _json
+    avg_path = OUTPUT_DIR / "averages.json"
+    avg_path.write_text(_json.dumps(city_avgs))
+    print(f"[averages] wrote {avg_path} ({len(city_avgs)} cities)")
+
     if failed_layers:
         print(f"WARNING: layers with no data this run: {failed_layers}")
     print("All layers done.")
@@ -265,6 +275,7 @@ def main(dry_run: bool = False, only_city: str | None = None) -> None:
         names = [l["name"] for l in LAYERS] + ["combined"]
         files = [OUTPUT_DIR / f"{n}.pmtiles" for n in names
                  if (OUTPUT_DIR / f"{n}.pmtiles").exists()]
+        files.append(avg_path)
         upload_to_github_release(files)
         print("Upload complete.")
 

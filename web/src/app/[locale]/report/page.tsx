@@ -4,7 +4,8 @@ import dynamic from "next/dynamic";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import NavBar from "@/components/NavBar";
-import { LAYERS } from "@/lib/layers";
+import { LAYERS, COMBINED_URL } from "@/lib/layers";
+import { CITIES } from "@/lib/cities";
 import { geocode, type GeocodeResult } from "@/lib/geocode";
 import { REPORT_PRICE_CZK, PAYMENTS_VISIBLE } from "@/lib/payment";
 
@@ -33,6 +34,28 @@ export default function ReportPage() {
   const [loading, setLoading] = useState(false);
   const [paidSession, setPaidSession] = useState<string | null>(null);
   const [buying, setBuying] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const mapImageRef = useRef<string | null>(null);
+  const averagesRef = useRef<Record<string, Record<string, number>> | null>(null);
+
+  // city averages for the PDF "vs city" comparison (loaded once)
+  useEffect(() => {
+    fetch(`${COMBINED_URL.replace("combined.pmtiles", "averages.json").split("?")[0]}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { averagesRef.current = d; })
+      .catch(() => {});
+  }, []);
+
+  const nearestCity = useMemo(() => {
+    if (!selected) return null;
+    let best = CITIES[0];
+    let bestD = Infinity;
+    for (const c of CITIES) {
+      const d = Math.hypot(c.center[0] - selected.lon, c.center[1] - selected.lat);
+      if (d < bestD) { bestD = d; best = c; }
+    }
+    return best;
+  }, [selected]);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Query value for which search must NOT run (set by a selection or the
   // paid-return restore) — deterministic regardless of effect timing.
@@ -73,19 +96,32 @@ export default function ReportPage() {
   };
 
   const downloadPdf = async () => {
-    const res = await fetch("/api/report/pdf", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ address: selected?.label ?? query, scores, session: paidSession }),
-    });
-    if (!res.ok) return;
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "report.pdf";
-    a.click();
-    URL.revokeObjectURL(url);
+    setDownloading(true);
+    try {
+      const cityAvg = nearestCity ? averagesRef.current?.[nearestCity.id] : undefined;
+      const res = await fetch("/api/report/pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          address: selected?.label ?? query,
+          scores,
+          session: paidSession ?? "mock_preview", // free preview while payments are off
+          mapImage: mapImageRef.current,
+          cityAvg,
+          cityName: nearestCity?.name,
+        }),
+      });
+      if (!res.ok) return;
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "report.pdf";
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setDownloading(false);
+    }
   };
 
   useEffect(() => {
@@ -189,7 +225,7 @@ export default function ReportPage() {
           <div className="grid md:grid-cols-2 gap-6">
             {/* Map */}
             <div className="h-72 md:h-[28rem] border border-[var(--border)] overflow-hidden">
-              <ReportMap lat={selected.lat} lon={selected.lon} onScores={handleScores} legend={t("report.mapLegend")} />
+              <ReportMap lat={selected.lat} lon={selected.lon} onScores={handleScores} legend={t("report.mapLegend")} onImage={(img) => { mapImageRef.current = img; }} />
             </div>
 
             {/* Report */}
@@ -278,11 +314,13 @@ export default function ReportPage() {
                     <p className="font-body text-sm text-[var(--text)] mb-1">{t("report.pdfTitle")}</p>
                     <p className="font-body text-xs text-[var(--text-muted)] mb-3">{t("report.pdfDesc")}</p>
                     {!PAYMENTS_VISIBLE ? (
+                      // Payments not active yet — offer the PDF as a free preview
                       <button
-                        disabled
-                        className="px-4 py-2 text-xs font-body uppercase tracking-[0.16em] bg-[var(--accent)] text-[#0b0d12] opacity-50 cursor-not-allowed"
+                        onClick={downloadPdf}
+                        disabled={downloading}
+                        className="px-4 py-2 text-xs font-body uppercase tracking-[0.16em] bg-[var(--accent)] text-[#0b0d12] hover:opacity-90 transition-opacity disabled:opacity-50"
                       >
-                        {t("report.pdfSoon")}
+                        {downloading ? t("report.pdfWait") : t("report.pdfFree")}
                       </button>
                     ) : paidSession ? (
                       <button

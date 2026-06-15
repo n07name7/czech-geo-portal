@@ -85,6 +85,7 @@
     "mapLegend": "Area colour = overall location rating (brighter = better)",
     "percentile": " pct",
     "premiumTitle": "Premium — in the full report",
-    "unlock": "Unlock full report for {price} CZK"
+    "unlock": "Unlock full report for {price} CZK",
+    "pdfFree": "Download PDF (free preview)"
   }
 }

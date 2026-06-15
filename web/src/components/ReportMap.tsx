@@ -28,14 +28,18 @@ interface Props {
   onScores: (scores: Record<string, number> | null) => void;
   /** Caption explaining what the coloured hexagons mean */
   legend: string;
+  /** Receives a PNG snapshot of the map for the PDF */
+  onImage?: (dataUrl: string) => void;
 }
 
-export default function ReportMap({ lat, lon, onScores, legend }: Props) {
+export default function ReportMap({ lat, lon, onScores, legend, onImage }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
   const onScoresRef = useRef(onScores);
+  const onImageRef = useRef(onImage);
   useEffect(() => { onScoresRef.current = onScores; }, [onScores]);
+  useEffect(() => { onImageRef.current = onImage; }, [onImage]);
 
   // Current target + per-lookup resolution state, kept in refs so the single
   // idle handler always sees the latest values and each address re-arms.
@@ -60,7 +64,9 @@ export default function ReportMap({ lat, lon, onScores, legend }: Props) {
       zoom: 14,
       maxZoom: 18,
       attributionControl: false,
-    });
+      // allow canvas snapshot for the PDF (valid at runtime, missing from types)
+      preserveDrawingBuffer: true,
+    } as maplibregl.MapOptions);
     map.addControl(new maplibregl.NavigationControl(), "top-right");
     mapRef.current = map;
 
@@ -88,6 +94,13 @@ export default function ReportMap({ lat, lon, onScores, legend }: Props) {
       resolved.current = true;
       if (timer.current) clearTimeout(timer.current);
       onScoresRef.current(s);
+      if (s && onImageRef.current) {
+        // grab a snapshot once the render has settled
+        map.once("idle", () => {
+          try { onImageRef.current?.(map.getCanvas().toDataURL("image/png")); }
+          catch { /* canvas not capturable */ }
+        });
+      }
     };
 
     const readScores = () => {
