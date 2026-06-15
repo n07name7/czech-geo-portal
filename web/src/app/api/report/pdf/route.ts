@@ -90,7 +90,18 @@ function loadFont(name: string): Uint8Array {
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json().catch(() => ({}));
+  // Accept either JSON (fetch) or a form post with a `payload` field. The form
+  // path lets the browser download via Content-Disposition instead of opening a
+  // blob in a viewer tab (reliable file download on mobile).
+  const ct = req.headers.get("content-type") || "";
+  let body: Record<string, unknown> = {};
+  if (ct.includes("application/json")) {
+    body = await req.json().catch(() => ({}));
+  } else {
+    const form = await req.formData().catch(() => null);
+    const payload = form?.get("payload");
+    if (typeof payload === "string") { try { body = JSON.parse(payload); } catch { /* ignore */ } }
+  }
   const { address, scores, session, mapImage, cityAvg, cityName, nearby, rent, rentCity, rentQuarter, isoWalk, isoDrive } = body as {
     address?: string; scores?: Record<string, number>; session?: string | null;
     mapImage?: string; cityAvg?: Record<string, number>; cityName?: string;

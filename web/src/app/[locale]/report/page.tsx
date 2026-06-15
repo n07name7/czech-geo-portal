@@ -119,39 +119,53 @@ export default function ReportPage() {
     }
   };
 
-  const downloadPdf = async () => {
-    setDownloading(true);
-    try {
-      const cityAvg = nearestCity ? averagesRef.current?.[nearestCity.id] : undefined;
-      const res = await fetch("/api/report/pdf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          address: selected?.label ?? query,
-          scores,
-          session: paidSession ?? "mock_preview", // free preview while payments are off
-          mapImage: mapImageRef.current,
-          cityAvg,
-          cityName: nearestCity?.name,
-          nearby,
-          rent,
-          rentCity,
-          rentQuarter: rentMeta?.rentQuarter,
-          isoWalk: isoWalkRef.current ? { img: isoWalkRef.current, area: isoArea.walk } : undefined,
-          isoDrive: isoDriveRef.current ? { img: isoDriveRef.current, area: isoArea.drive } : undefined,
-        }),
-      });
-      if (!res.ok) return;
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "report.pdf";
-      a.click();
-      URL.revokeObjectURL(url);
-    } finally {
-      setDownloading(false);
+  const downloadPdf = () => {
+    // Submit a hidden form to the PDF endpoint targeting an off-screen iframe.
+    // The browser then downloads via the server's Content-Disposition:attachment
+    // header instead of opening a blob in a viewer tab — this is what makes it a
+    // real file download on mobile (a blob URL + <a download> is ignored there
+    // and is lost on refresh).
+    const cityAvg = nearestCity ? averagesRef.current?.[nearestCity.id] : undefined;
+    const payload = {
+      address: selected?.label ?? query,
+      scores,
+      session: paidSession ?? "mock_preview", // free preview while payments are off
+      mapImage: mapImageRef.current,
+      cityAvg,
+      cityName: nearestCity?.name,
+      nearby,
+      rent,
+      rentCity,
+      rentQuarter: rentMeta?.rentQuarter,
+      isoWalk: isoWalkRef.current ? { img: isoWalkRef.current, area: isoArea.walk } : undefined,
+      isoDrive: isoDriveRef.current ? { img: isoDriveRef.current, area: isoArea.drive } : undefined,
+    };
+
+    let sink = document.getElementById("pdf-sink") as HTMLIFrameElement | null;
+    if (!sink) {
+      sink = document.createElement("iframe");
+      sink.id = "pdf-sink";
+      sink.name = "pdf-sink";
+      sink.style.display = "none";
+      document.body.appendChild(sink);
     }
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = "/api/report/pdf";
+    form.target = "pdf-sink";
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = "payload";
+    input.value = JSON.stringify(payload);
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+    form.remove();
+
+    // brief feedback while the server builds the file (no completion signal
+    // from a form submit, so reset after a short delay)
+    setDownloading(true);
+    window.setTimeout(() => setDownloading(false), 3500);
   };
 
   useEffect(() => {
