@@ -605,5 +605,5 @@ export default function MapView({ activeLayer, basemap, activeCity, basemapId, m
     );
   }, [weights]);
 
-  return <div ref={containerRef} className="w-full h-full" style={{ touchAction: "none" }} />;
+  return <div ref={containerRef} className="w-full h-full" />;
 }

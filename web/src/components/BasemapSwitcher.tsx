@@ -16,7 +16,7 @@ export default function BasemapSwitcher({ activeBasemap, onChange, hexVisible, o
   return (
     <div
       className="absolute right-4 z-10 flex flex-col border border-[var(--border)]"
-      style={{ bottom: "calc(2.5rem + env(safe-area-inset-bottom, 0px))" }}
+      style={{ bottom: "calc(4.5rem + env(safe-area-inset-bottom, 0px))" }}
     >
       {/* Hex overlay toggle — top row of the control group */}
       <button
