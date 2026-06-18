@@ -26,6 +26,7 @@ export default function LanguageSwitcher() {
           {i > 0 && <span className="text-[var(--text-faint)] text-xs">·</span>}
           <button
             onClick={() => switchLocale(l.code)}
+            aria-label={`Změnit jazyk na ${l.code}`}
             className={`text-xs tracking-widest font-medium transition-colors ${
               locale === l.code
                 ? "text-[var(--accent)]"

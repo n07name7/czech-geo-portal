@@ -64,6 +64,7 @@ export default function CitySearch({ cities, value, onChange, placeholder = "Hle
           onFocus={handleFocus}
           onKeyDown={handleKey}
           placeholder={placeholder}
+          aria-label={placeholder}
           className="flex-1 bg-transparent text-xs font-body text-[var(--text)] placeholder-[var(--text-faint)] outline-none min-w-0"
         />
         {/* chevron */}
