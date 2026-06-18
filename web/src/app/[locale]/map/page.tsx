@@ -78,20 +78,12 @@ export default function MapPage() {
         labelHigh={t("legend.high")}
         gradientCss={LEGEND_GRADIENT_CSS[activeBasemap] ?? LEGEND_GRADIENT_CSS.tmava}
       />
-      <BasemapSwitcher activeBasemap={activeBasemap} onChange={setActiveBasemap} />
-
-      {/* Hide / show the hexagon overlay — subtle toggle above the basemap switcher */}
-      <button
-        onClick={() => setHexVisible((v) => !v)}
-        className="absolute right-4 z-10 w-8 h-8 flex items-center justify-center bg-[var(--surface)]/80 backdrop-blur-sm border border-[var(--border)] text-[var(--text-faint)] hover:text-[var(--accent)] hover:border-[var(--accent)]/40 transition-all duration-200 touch-manipulation"
-        style={{ bottom: "calc(2.5rem + env(safe-area-inset-bottom, 0px) + 86px)" }}
-        aria-pressed={!hexVisible}
-        title={hexVisible ? t("ui.hideHex") : t("ui.showHex")}
-      >
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className={`transition-opacity duration-200 ${hexVisible ? "opacity-100" : "opacity-30"}`}>
-          <path d="M7 1L12.5 4V10L7 13L1.5 10V4L7 1Z" stroke="currentColor" strokeWidth="1.2" fill={hexVisible ? "currentColor" : "none"} fillOpacity={hexVisible ? 0.15 : 0} />
-        </svg>
-      </button>
+      <BasemapSwitcher
+        activeBasemap={activeBasemap}
+        onChange={setActiveBasemap}
+        hexVisible={hexVisible}
+        onHexToggle={() => setHexVisible((v) => !v)}
+      />
     </main>
   );
 }

@@ -521,11 +521,21 @@ export default function MapView({ activeLayer, basemap, activeCity, basemapId, m
 
     // Track last touch time to suppress synthesized mouse events on Android
     let lastTouchTime = 0;
+    // Track multi-touch to avoid showing popup after pinch-zoom
+    let maxTouchCount = 0;
 
-    // Mobile: use MapLibre's touchend (reliable on all Android versions)
+    map.getCanvas().addEventListener("touchstart", (e) => {
+      maxTouchCount = Math.max(maxTouchCount, e.touches.length);
+    }, { passive: true });
+
+    // Mobile: show popup only on clean single-finger tap, not after pinch
     map.on("touchend", (e) => {
-      if (e.originalEvent.changedTouches.length !== 1) return;
       lastTouchTime = Date.now();
+      const wasSingleTouch = maxTouchCount === 1;
+      // Reset for next gesture when all fingers lifted
+      if (e.originalEvent.touches.length === 0) maxTouchCount = 0;
+      if (!wasSingleTouch) return;
+      if (e.originalEvent.changedTouches.length !== 1) return;
       if (!tryShowHex(e.lngLat)) clearHover();
     });
 
