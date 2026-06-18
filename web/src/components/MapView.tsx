@@ -539,22 +539,23 @@ export default function MapView({ activeLayer, basemap, activeCity, basemapId, m
       if (!tryShowHex(e.lngLat)) clearHover();
     });
 
-    // Desktop hover — coalesce rapid mousemoves to one cheap lookup per frame
-    let hoverRaf = 0;
+    // Desktop hover — debounce rapid mousemoves to prevent lag/stutter 
+    // from too many setFilter calls (which force style recalculation).
+    let hoverTimeout: ReturnType<typeof setTimeout> | null = null;
     let pendingPoint: maplibregl.Point | null = null;
     let pendingLngLat: maplibregl.LngLat | null = null;
     map.on("mousemove", (e) => {
       if (Date.now() - lastTouchTime < 600) return;
       pendingPoint = e.point;
       pendingLngLat = e.lngLat;
-      if (hoverRaf) return;
-      hoverRaf = requestAnimationFrame(() => {
-        hoverRaf = 0;
+      if (hoverTimeout) clearTimeout(hoverTimeout);
+      hoverTimeout = setTimeout(() => {
         if (pendingPoint && pendingLngLat && !showHover(pendingPoint, pendingLngLat)) clearHover();
-      });
+      }, 40);
     });
     map.on("mouseleave", () => {
       if (Date.now() - lastTouchTime < 600) return;
+      if (hoverTimeout) clearTimeout(hoverTimeout);
       clearHover();
     });
 
