@@ -165,7 +165,7 @@ export default function ReportMap({ lat, lon, onScores, legend, onImage }: Props
 
   return (
     <div className="relative w-full h-full">
-      <div ref={containerRef} className="w-full h-full" />
+      <div ref={containerRef} className="w-full h-full" style={{ touchAction: "none" }} />
       {/* Caption: the hexagons show overall area quality (same as the score) */}
       <div className="absolute bottom-2 left-2 z-10 flex items-center gap-2 bg-[#0b0d12]/85 border border-[var(--border)] px-2.5 py-1.5 pointer-events-none">
         <span

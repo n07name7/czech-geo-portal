@@ -61,5 +61,5 @@ export default function PickMap({ lat, lon, onPick }: Props) {
     map.flyTo({ center: [lon, lat], zoom: Math.max(map.getZoom(), 13), duration: 600 });
   }, [lat, lon]);
 
-  return <div ref={containerRef} className="w-full h-full" />;
+  return <div ref={containerRef} className="w-full h-full" style={{ touchAction: "none" }} />;
 }
