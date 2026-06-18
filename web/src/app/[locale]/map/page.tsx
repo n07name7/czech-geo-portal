@@ -81,9 +81,30 @@ export default function MapPage() {
       <BasemapSwitcher
         activeBasemap={activeBasemap}
         onChange={setActiveBasemap}
-        hexVisible={hexVisible}
-        onHexToggle={() => setHexVisible((v) => !v)}
       />
+
+      {/* Floating Hex Toggle — Styled like MapLibre native controls, sits right below them */}
+      <div className="absolute top-[160px] right-[10px] z-10 flex flex-col border border-[var(--border)] bg-[var(--surface)] shadow-sm">
+        <button
+          onClick={() => setHexVisible((v) => !v)}
+          className="w-[29px] h-[29px] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--card)] transition-colors"
+          title={hexVisible ? t("ui.hideHex") : t("ui.showHex")}
+          aria-pressed={!hexVisible}
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className={`transition-opacity ${hexVisible ? "opacity-100" : "opacity-40"}`}>
+            <path
+              d="M7 1L12.5 4V10L7 13L1.5 10V4L7 1Z"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              fill={hexVisible ? "currentColor" : "none"}
+              fillOpacity={hexVisible ? 0.3 : 0}
+            />
+            {!hexVisible && (
+              <line x1="2" y1="12" x2="12" y2="2" stroke="currentColor" strokeWidth="1.5" />
+            )}
+          </svg>
+        </button>
+      </div>
     </main>
   );
 }

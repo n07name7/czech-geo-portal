@@ -9,7 +9,7 @@ export default function Legend({
 }) {
   return (
     <div
-      className="absolute left-1/2 -translate-x-1/2 z-10 bg-[var(--surface)] border border-[var(--border)] px-4 py-2.5 whitespace-nowrap"
+      className="absolute left-4 md:left-1/2 md:-translate-x-1/2 z-10 bg-[var(--surface)] border border-[var(--border)] px-4 py-2.5 whitespace-nowrap"
       style={{ bottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))" }}
     >
       <div className="flex items-center gap-3">
