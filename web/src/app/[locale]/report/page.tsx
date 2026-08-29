@@ -8,6 +8,7 @@ import { LAYERS, COMBINED_URL } from "@/lib/layers";
 import { CITIES } from "@/lib/cities";
 import { geocode, reverseGeocode, type GeocodeResult } from "@/lib/geocode";
 import { REPORT_PRICE_CZK, PAYMENTS_VISIBLE } from "@/lib/payment";
+import { buildDecisionSummary, PROFILE_IDS, type ReportProfileId } from "@/lib/report-insights";
 
 const ReportMap = dynamic(() => import("@/components/ReportMap"), { ssr: false });
 const IsochroneMap = dynamic(() => import("@/components/IsochroneMap"), { ssr: false });
@@ -43,6 +44,7 @@ export default function ReportPage() {
   const [flags, setFlags] = useState<Record<string, { dist: number }> | null>(null);
   const [extrasLoading, setExtrasLoading] = useState(false);
   const [isoArea, setIsoArea] = useState<{ walk?: number; drive?: number }>({});
+  const [profile, setProfile] = useState<ReportProfileId>("balanced");
   const mapImageRef = useRef<string | null>(null);
   const isoWalkRef = useRef<string | null>(null);
   const isoDriveRef = useRef<string | null>(null);
@@ -101,19 +103,24 @@ export default function ReportPage() {
   // paid-return restore) — deterministic regardless of effect timing.
   const skipQuery = useRef<string | null>(null);
 
-  // Returning from checkout: ?paid=<session>&address=<label> — restore the
-  // report by re-geocoding the address and selecting it, so the unlocked
-  // download button appears.
+  // Returning from checkout or arriving from the landing search: restore a
+  // selected place from the URL so the visitor lands in a real report, not an
+  // empty second form. Coordinates avoid a redundant geocoder request.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const paid = params.get("paid");
-    if (!paid) return;
-    setPaidSession(paid);
+    if (paid) setPaidSession(paid);
     const addr = params.get("address");
     if (!addr) return;
     skipQuery.current = addr;
     setQuery(addr);
     setLoading(true);
+    const lat = Number(params.get("lat"));
+    const lon = Number(params.get("lon"));
+    if (Number.isFinite(lat) && Number.isFinite(lon)) {
+      setSelected({ label: addr, lat, lon });
+      return;
+    }
     geocode(addr).then((rs) => {
       if (rs[0]) setSelected(rs[0]);
       else setLoading(false);
@@ -235,6 +242,15 @@ export default function ReportPage() {
     ? (averagesRef.current?.[nearestCity.id] as Record<string, number> | undefined)?.rent
     : undefined;
   const rentMeta = (averagesRef.current as unknown as { _meta?: { rentQuarter?: string } } | null)?._meta;
+  const decision = useMemo(() => buildDecisionSummary({
+    scores: scores ?? {},
+    profile,
+    nearby,
+    flags,
+    rent,
+    rentCity,
+    locale: locale === "en" ? "en" : "cs",
+  }), [scores, profile, nearby, flags, rent, rentCity, locale]);
 
   // Concrete metric per layer. The 800 m radius is stated once above the
   // list, so rows stay compact: bare count for POIs, dB for noise,
@@ -355,8 +371,83 @@ export default function ReportPage() {
                     </div>
                   </div>
 
-                  {/* Rent level is PDF-only — values are still computed below
-                      and passed to the PDF, just not shown on the web page. */}
+                  {/* Decision-first view: profiles make the score mean something for a real move. */}
+                  <section className="mb-6 border-y border-[var(--border)] py-4">
+                    <p className="text-[10px] uppercase tracking-[0.18em] font-body text-[var(--accent)] mb-2">
+                      {t("report.profileTitle")}
+                    </p>
+                    <p className="text-xs font-body text-[var(--text-muted)] mb-3">{t("report.profileLead")}</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {PROFILE_IDS.map((id) => (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => setProfile(id)}
+                          aria-pressed={profile === id}
+                          className={`min-h-11 border px-3 py-2.5 text-left transition-colors ${profile === id
+                            ? "border-[var(--accent)] bg-[var(--accent-glow)] text-[var(--text)]"
+                            : "border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--text-muted)] hover:text-[var(--text)]"}`}
+                        >
+                          <span className="block text-xs font-body font-medium">{t(`report.profile.${id}.label`)}</span>
+                          <span className="block mt-0.5 text-[10px] font-body opacity-75 leading-snug">{t(`report.profile.${id}.desc`)}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </section>
+
+                  <section className="mb-6 border border-[var(--accent)] border-opacity-40 bg-[var(--card)] p-4">
+                    <div className="flex items-end justify-between gap-4 mb-3">
+                      <div>
+                        <p className="text-[10px] uppercase tracking-[0.18em] font-body text-[var(--accent)]">{t("report.decisionTitle")}</p>
+                        <p className="mt-1 text-sm font-body text-[var(--text)] leading-snug">{decision.verdict}</p>
+                      </div>
+                      <span className="font-display text-3xl leading-none text-[var(--accent)] tabular-nums">{decision.profileScore}</span>
+                    </div>
+                    {(decision.strengths.length > 0 || decision.watchOuts.length > 0) && (
+                      <div className="grid gap-4 sm:grid-cols-2 text-[11px] font-body leading-snug">
+                        <div>
+                          <p className="mb-1.5 text-[10px] uppercase tracking-[0.14em] text-[#7bc46f]">{t("report.strengths")}</p>
+                          {decision.strengths.length > 0 ? <ul className="space-y-1.5 text-[var(--text-muted)]">{decision.strengths.map((item) => <li key={item}>• {item}</li>)}</ul> : <p className="text-[var(--text-faint)]">—</p>}
+                        </div>
+                        <div>
+                          <p className="mb-1.5 text-[10px] uppercase tracking-[0.14em] text-[#e59067]">{t("report.watchOuts")}</p>
+                          {decision.watchOuts.length > 0 ? <ul className="space-y-1.5 text-[var(--text-muted)]">{decision.watchOuts.map((item) => <li key={item}>• {item}</li>)}</ul> : <p className="text-[var(--text-faint)]">—</p>}
+                        </div>
+                      </div>
+                    )}
+                  </section>
+
+                  {/* Concrete evidence belongs on the web page too, not only inside a downloaded PDF. */}
+                  {!extrasLoading && (rent || nearby) && (
+                    <section className="mb-6 grid gap-3 sm:grid-cols-2">
+                      {typeof rent === "number" && (
+                        <div className="border border-[var(--border)] bg-[var(--surface)] p-4">
+                          <p className="text-[10px] uppercase tracking-[0.16em] font-body text-[var(--text-faint)]">{t("report.rentTitle")}</p>
+                          <p className="mt-2 font-display text-2xl text-[var(--text)] tabular-nums">{rent.toLocaleString(locale)} <span className="text-xs font-body text-[var(--text-muted)]">{t("report.rentUnit")}</span></p>
+                          {typeof rentCity === "number" && rentCity > 0 && (
+                            <p className={`mt-1 text-[11px] font-body ${rent <= rentCity ? "text-[#7bc46f]" : "text-[#e59067]"}`}>
+                              {Math.abs(Math.round(((rent - rentCity) / rentCity) * 100))} % {rent <= rentCity ? t("report.rentBelow") : t("report.rentAbove")} · {nearestCity?.name}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      {nearby && (
+                        <div className="border border-[var(--border)] bg-[var(--surface)] p-4">
+                          <p className="text-[10px] uppercase tracking-[0.16em] font-body text-[var(--text-faint)]">{t("report.nearbyTitle")}</p>
+                          <div className="mt-2 space-y-1.5">
+                            {Object.entries(nearby).slice(0, 3).map(([category, place]) => (
+                              <div key={category} className="flex items-baseline justify-between gap-3 text-[11px] font-body">
+                                <span className="min-w-0 truncate text-[var(--text-muted)]"><span className="text-[var(--text-faint)]">{t(`report.nearCat.${category}`)} · </span>{place.name}</span>
+                                <span className="shrink-0 text-[var(--text)] tabular-nums">{place.min} {t("report.nearWalk")}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </section>
+                  )}
+
+                  {/* Rent is shown above and carried into the PDF below as well. */}
 
                   {/* Per-category rows: concrete number + score bar */}
                   <p className="text-[10px] font-body text-[var(--text-faint)] mb-2">

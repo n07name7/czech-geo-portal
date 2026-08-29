@@ -40,6 +40,10 @@ export default function NavBar({ floating = false }: Props) {
         {t("map")}
       </Link>
 
+      <Link href={`/${locale}/compare`} className={`${linkCls(`/${locale}/compare`)} hidden sm:inline`}>
+        {t("compare")}
+      </Link>
+
       <Link href={`/${locale}/report`} className={linkCls(`/${locale}/report`)}>
         {t("report")}
       </Link>

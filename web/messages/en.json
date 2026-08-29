@@ -32,6 +32,7 @@
   },
   "nav": {
     "map": "Map",
+    "compare": "Compare",
     "methodology": "Methodology",
     "report": "Report"
   },
@@ -39,6 +40,7 @@
     "headline": "Where in Czechia?",
     "subheadline": "Compare neighbourhoods by schools, quiet, safety, transport and more — and find the right one for you.",
     "cta": "Open map",
+    "ctaCompare": "Compare two addresses",
     "layersTitle": "What the portal shows",
     "howTitle": "How it works",
     "step1Label": "Explore the layers",
@@ -51,6 +53,11 @@
     "statSource": "Czech public data",
     "statLayers": "{count} data layers",
     "ctaReport": "Check an address",
+    "searchLabel": "Address to check",
+    "searchPlaceholder": "Enter a street or address…",
+    "searchCta": "Check address",
+    "searching": "Searching…",
+    "searchNote": "Basic overview free · no sign-up",
     "reportShowcaseTitle": "What you get in the report",
     "reportShowcaseLead": "Enter an address or click the map and download a detailed PDF about the neighbourhood:"
   },
@@ -68,6 +75,17 @@
     "svetla": "Light",
     "tmava": "Dark",
     "satelit": "Satellite"
+  },
+  "compare": {
+    "eyebrow": "Housing decision",
+    "title": "Compare two addresses before you decide.",
+    "lead": "Choose two specific addresses. See them side by side and get a recommendation based on your priorities.",
+    "addressA": "Address A",
+    "addressB": "Address B",
+    "placeholder": "Enter a street or address…",
+    "change": "Change address",
+    "openReport": "Open detailed report",
+    "recommendation": "Recommendation"
   },
   "report": {
     "title": "Address report",
@@ -110,6 +128,8 @@
     "rentTitle": "Rent nearby",
     "rentUnit": "CZK/m²/mo",
     "rentVs": "vs median · {city}",
+    "rentBelow": "below the city median",
+    "rentAbove": "above the city median",
     "rentSource": "Source: MF CR · official rent map",
     "isoTitle": "Where you can get from here",
     "isoDesc": "Reach within 10 minutes along the real street network.",
@@ -120,6 +140,17 @@
     "pickHide": "Hide map",
     "pickHint": "Click the map to choose a spot (no address needed).",
     "scoreCtx": "relative to the city",
+    "profileTitle": "Who are you choosing for?",
+    "profileLead": "We adapt the score and recommendation to what matters to you.",
+    "profile": {
+      "balanced": { "label": "Balanced", "desc": "a general view of the area" },
+      "family": { "label": "For a family", "desc": "schools, childcare, quiet and safety" },
+      "renter": { "label": "For renting", "desc": "transit, services and local price" },
+      "student": { "label": "For a student", "desc": "access, services and free time" }
+    },
+    "decisionTitle": "Decision summary",
+    "strengths": "Strengths",
+    "watchOuts": "Watch-outs",
     "feat": {
       "rent": "Local rent (CZK/m²) + comparison to the city",
       "nearby": "What's nearby — shops, transit, school… with walking time",

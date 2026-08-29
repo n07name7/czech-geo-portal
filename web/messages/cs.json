@@ -32,6 +32,7 @@
   },
   "nav": {
     "map": "Mapa",
+    "compare": "Porovnat",
     "methodology": "Metodologie",
     "report": "Report"
   },
@@ -39,6 +40,7 @@
     "headline": "Kam v Česku?",
     "subheadline": "Porovnejte čtvrti podle škol, klidu, bezpečnosti, dopravy a dalších — a najděte tu pravou pro sebe.",
     "cta": "Otevřít mapu",
+    "ctaCompare": "Porovnat dvě adresy",
     "layersTitle": "Co portál zobrazuje",
     "howTitle": "Jak to funguje?",
     "step1Label": "Prozkoumej vrstvy",
@@ -51,6 +53,11 @@
     "statSource": "Veřejná data ČR",
     "statLayers": "{count} vrstev dat",
     "ctaReport": "Zjistit kvalitu své adresy",
+    "searchLabel": "Adresa k prověření",
+    "searchPlaceholder": "Zadejte ulici nebo adresu…",
+    "searchCta": "Prověřit adresu",
+    "searching": "Hledám…",
+    "searchNote": "Základní přehled zdarma · bez registrace",
     "reportShowcaseTitle": "Co dostanete v reportu",
     "reportShowcaseLead": "Zadejte adresu nebo klikněte na mapu a stáhněte si detailní PDF o okolí:"
   },
@@ -68,6 +75,17 @@
     "svetla": "Světlá",
     "tmava": "Tmavá",
     "satelit": "Satelit"
+  },
+  "compare": {
+    "eyebrow": "Rozhodnutí o bydlení",
+    "title": "Porovnejte dvě adresy, než se rozhodnete.",
+    "lead": "Vyberte dvě konkrétní adresy. Uvidíte je vedle sebe a doporučení se přizpůsobí vašim prioritám.",
+    "addressA": "Adresa A",
+    "addressB": "Adresa B",
+    "placeholder": "Zadejte ulici nebo adresu…",
+    "change": "Změnit adresu",
+    "openReport": "Otevřít detailní report",
+    "recommendation": "Doporučení"
   },
   "report": {
     "title": "Report podle adresy",
@@ -110,6 +128,8 @@
     "rentTitle": "Nájemné v okolí",
     "rentUnit": "Kč/m²/měs",
     "rentVs": "vs medián · {city}",
+    "rentBelow": "pod mediánem města",
+    "rentAbove": "nad mediánem města",
     "rentSource": "Zdroj: MF ČR · cenová mapa nájemného",
     "isoTitle": "Kam se odsud dostanete",
     "isoDesc": "Dosah za 10 minut po reálné silniční síti.",
@@ -120,6 +140,17 @@
     "pickHide": "Skrýt mapu",
     "pickHint": "Klikněte do mapy pro výběr místa (i bez adresy).",
     "scoreCtx": "relativně v rámci města",
+    "profileTitle": "Vyberte, pro koho hledáte",
+    "profileLead": "Skóre i doporučení přizpůsobíme tomu, co je pro vás důležité.",
+    "profile": {
+      "balanced": { "label": "Vyváženě", "desc": "obecný pohled na lokalitu" },
+      "family": { "label": "Pro rodinu", "desc": "školy, školky, klid a bezpečnost" },
+      "renter": { "label": "Pro nájem", "desc": "MHD, služby a cena okolí" },
+      "student": { "label": "Pro studenta", "desc": "dostupnost, služby a volný čas" }
+    },
+    "decisionTitle": "Shrnutí pro rozhodnutí",
+    "strengths": "Silné stránky",
+    "watchOuts": "Na co pozor",
     "feat": {
       "rent": "Nájemné v okolí (Kč/m²) + srovnání s městem",
       "nearby": "Co máte v okolí — obchody, MHD, škola… s docházkou",

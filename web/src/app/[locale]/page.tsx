@@ -2,6 +2,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { getLocale } from "next-intl/server";
 import NavBar from "@/components/NavBar";
+import AddressStart from "@/components/AddressStart";
 import { LAYERS } from "@/lib/layers";
 
 // ─── Hex-grid math ─────────────────────────────────────────────────────────────
@@ -144,26 +145,20 @@ export default async function LandingPage() {
             <HeroSub />
           </p>
 
-          <div className="flex flex-wrap gap-3 mb-12">
+          <AddressStart />
+
+          <div className="flex flex-wrap gap-3 mt-5 mb-10">
+            <Link
+              href={`/${locale}/compare`}
+              className="inline-flex items-center gap-2 border border-[var(--border)] hover:border-[var(--accent)] text-[var(--text-muted)] hover:text-[var(--accent)] font-body text-sm px-5 py-2.5 rounded-none transition-colors"
+            >
+              <CompareLabel />
+            </Link>
             <Link
               href={`/${locale}/map`}
-              className="inline-flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[#0b0d12] font-body font-semibold text-sm px-6 py-3 rounded-none transition-colors"
+              className="inline-flex items-center gap-2 text-[var(--text-faint)] hover:text-[var(--text-muted)] font-body text-sm px-2 py-2.5 transition-colors"
             >
               <CtaLabel />
-              <span className="text-base leading-none">→</span>
-            </Link>
-            <Link
-              href={`/${locale}/report`}
-              className="inline-flex items-center gap-2 border border-[var(--accent)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-[#0b0d12] font-body font-semibold text-sm px-6 py-3 rounded-none transition-colors"
-            >
-              <ReportLabel />
-              <span className="text-base leading-none">→</span>
-            </Link>
-            <Link
-              href={`/${locale}/methodology`}
-              className="inline-flex items-center gap-2 border border-[var(--border)] hover:border-[var(--accent)] text-[var(--text-muted)] hover:text-[var(--accent)] font-body text-sm px-6 py-3 rounded-none transition-colors"
-            >
-              <MetodLabel />
             </Link>
           </div>
 
@@ -311,6 +306,11 @@ function CtaLabel() {
   return <>{t("cta")}</>;
 }
 
+function CompareLabel() {
+  const t = useTranslations("landing");
+  return <>{t("ctaCompare")}</>;
+}
+
 function ReportLabel() {
   const t = useTranslations("landing");
   return <>{t("ctaReport")}</>;
@@ -334,10 +334,6 @@ function ReportFeature({ featKey }: { featKey: string }) {
       <span className="font-body text-sm text-[var(--text-muted)] leading-snug">{t(`feat.${featKey}`)}</span>
     </div>
   );
-}
-
-function MetodLabel() {
-  return <>Metodologie</>;
 }
 
 function LayersTitle() {
