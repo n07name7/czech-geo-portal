@@ -143,11 +143,9 @@ export default function ReportPage() {
   };
 
   const downloadPdf = () => {
-    // Submit a hidden form to the PDF endpoint targeting an off-screen iframe.
-    // The browser then downloads via the server's Content-Disposition:attachment
-    // header instead of opening a blob in a viewer tab — this is what makes it a
-    // real file download on mobile (a blob URL + <a download> is ignored there
-    // and is lost on refresh).
+    // A normal form navigation lets mobile browsers honor the server's
+    // Content-Disposition: attachment response. Hidden iframes can silently
+    // discard downloads on mobile even when the PDF endpoint succeeds.
     const cityAvg = nearestCity ? averagesRef.current?.[nearestCity.id] : undefined;
     const payload = {
       address: selected?.label ?? query,
@@ -165,19 +163,9 @@ export default function ReportPage() {
       flood: flood ?? undefined,
       flags: flags ?? undefined,
     };
-
-    let sink = document.getElementById("pdf-sink") as HTMLIFrameElement | null;
-    if (!sink) {
-      sink = document.createElement("iframe");
-      sink.id = "pdf-sink";
-      sink.name = "pdf-sink";
-      sink.style.display = "none";
-      document.body.appendChild(sink);
-    }
     const form = document.createElement("form");
     form.method = "POST";
     form.action = "/api/report/pdf";
-    form.target = "pdf-sink";
     const input = document.createElement("input");
     input.type = "hidden";
     input.name = "payload";
