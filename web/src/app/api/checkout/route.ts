@@ -1,10 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
 import {
   PAYMENTS_LIVE,
+  PAYMENTS_VISIBLE,
   REPORT_PRICE_CZK,
   SUBSCRIPTION_PRICE_CZK,
   stripeSecret,
-  mockSessionId,
 } from "@/lib/payment";
 
 // Creates a Checkout Session and returns { url } to redirect to.
@@ -13,18 +13,14 @@ import {
 export async function POST(req: NextRequest) {
   const { mode, address, locale } = await req.json().catch(() => ({}));
   const kind = mode === "subscription" ? "subscription" : "payment";
+
+  // Checkout is deliberately closed during beta. This prevents a configuration
+  // mistake from presenting a paid flow without durable purchase entitlement.
+  if (!PAYMENTS_VISIBLE || !PAYMENTS_LIVE) {
+    return NextResponse.json({ error: "payments_unavailable" }, { status: 503 });
+  }
   const origin = req.nextUrl.origin;
   const loc = typeof locale === "string" ? locale : "cs";
-
-  if (!PAYMENTS_LIVE) {
-    const session = mockSessionId();
-    const params = new URLSearchParams({ paid: session });
-    if (address) params.set("address", String(address));
-    return NextResponse.json({
-      url: `${origin}/${loc}/report?${params.toString()}`,
-      mock: true,
-    });
-  }
 
   // ── Live Stripe Checkout ──────────────────────────────────────────────
   const amount = (kind === "subscription" ? SUBSCRIPTION_PRICE_CZK : REPORT_PRICE_CZK) * 100;

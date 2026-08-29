@@ -12,10 +12,11 @@ export const stripePublic = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ""
 /** Real Stripe is wired only when a secret key is present (server-side). */
 export const PAYMENTS_LIVE = stripeSecret.startsWith("sk_");
 
-/** Show the purchase UI only once a publishable key is configured. Until
- * then the page shows "coming soon" — the whole flow stays inactive in
- * public prod while the wiring is already in place. */
-export const PAYMENTS_VISIBLE = stripePublic.length > 0;
+// Payment wiring is intentionally disabled in this beta. A valid Stripe key is
+// NOT enough to sell reports: launch needs a durable entitlement record, a
+// verified webhook and a purchase-recovery path. Keep the product free until
+// those pieces are implemented and independently tested.
+export const PAYMENTS_VISIBLE = false;
 
 /** A session id we accept as paid. In mock mode any "mock_…" passes. */
 export function isPaidSession(session: string | null): boolean {
