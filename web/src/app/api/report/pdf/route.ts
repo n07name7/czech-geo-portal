@@ -54,18 +54,26 @@ function loadFont(name: string): Uint8Array {
 
 export async function POST(req: NextRequest) {
   const ct = req.headers.get("content-type") || "";
-  if (!ct.includes("application/json"))
-    return NextResponse.json({ error: "unsupported media type" }, { status: 415 });
   if (!pdfLimiter.allow(clientIdentifier(req.headers)))
     return NextResponse.json({ error: "rate limit" }, { status: 429, headers: { "Retry-After": "60" } });
 
-  let body: Record<string, unknown>;
+  let body: Record<string, unknown> = {};
   try {
-    body = await readLimitedJson(req, 5_000_000) as Record<string, unknown>;
+    if (ct.includes("application/json")) {
+      body = await readLimitedJson(req, 5_000_000) as Record<string, unknown>;
+    } else {
+      const form = await req.formData().catch(() => null);
+      const payload = form?.get("payload");
+      if (typeof payload === "string") {
+        body = JSON.parse(payload);
+      } else {
+        throw new Error("missing payload");
+      }
+    }
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof BodyTooLargeError ? "payload_too_large" : "bad_body" },
-      { status: error instanceof BodyTooLargeError ? 413 : 400 },
+      { error: "bad_body" },
+      { status: 400 },
     );
   }
 
