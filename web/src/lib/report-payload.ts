@@ -40,13 +40,14 @@ function validImage(value: unknown): "ok" | "large" | "invalid" {
 function validScores(value: unknown, allowCounts: boolean): boolean {
   if (!isRecord(value)) return false;
   const entries = Object.entries(value);
-  if (entries.length === 0 || entries.length > 64) return false;
+  if (entries.length === 0 || entries.length > 200) return false;
   return entries.every(([key, raw]) => {
-    if (typeof raw !== "number" || !Number.isFinite(raw)) return false;
-    if (SCORE_IDS.has(key)) return raw >= 0 && raw <= 1;
-    if (key === "rent") return raw >= 0 && raw <= 10_000;
-    if (allowCounts && key.startsWith("n_") && SCORE_IDS.has(key.slice(2))) return raw >= 0 && raw <= 1_000_000;
-    return false;
+    if (SCORE_IDS.has(key)) return typeof raw === "number" && Number.isFinite(raw) && raw >= 0 && raw <= 1;
+    if (key === "rent") return typeof raw === "number" && Number.isFinite(raw) && raw >= 0 && raw <= 10_000;
+    if (allowCounts && key.startsWith("n_") && SCORE_IDS.has(key.slice(2))) {
+      return typeof raw === "number" && Number.isFinite(raw) && raw >= 0 && raw <= 1_000_000;
+    }
+    return true; // Allow other PMTiles properties (counts, names, arbitrary metadata)
   });
 }
 
