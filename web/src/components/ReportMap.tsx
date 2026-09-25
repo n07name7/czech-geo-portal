@@ -83,7 +83,6 @@ export default function ReportMap({ lat, lon, nearby, onScores, onStatus, legend
       new maplibregl.GeolocateControl({
         positionOptions: { enableHighAccuracy: true },
         trackUserLocation: true,
-        showUserHeading: true,
       }),
       "top-right"
     );
