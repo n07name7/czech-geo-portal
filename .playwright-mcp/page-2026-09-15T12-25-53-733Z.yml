@@ -1,0 +1,140 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - navigation [ref=e3]:
+      - link "Kam v Česku?" [ref=e4] [cursor=pointer]:
+        - /url: /cs
+      - link "Mapa" [ref=e5] [cursor=pointer]:
+        - /url: /cs/map
+      - link "Porovnat" [ref=e6] [cursor=pointer]:
+        - /url: /cs/compare
+      - link "Report" [ref=e7] [cursor=pointer]:
+        - /url: /cs/report
+      - link "Metodologie" [ref=e8] [cursor=pointer]:
+        - /url: /cs/methodology
+      - generic [ref=e9]:
+        - button "Přepnout jazyk na CS" [ref=e11] [cursor=pointer]: CS
+        - generic [ref=e12]:
+          - generic [ref=e13]: ·
+          - button "Přepnout jazyk na EN" [ref=e14] [cursor=pointer]: EN
+        - generic [ref=e15]:
+          - generic [ref=e16]: ·
+          - button "Přepnout jazyk na RU" [ref=e17] [cursor=pointer]: RU
+    - generic [ref=e19]:
+      - generic [ref=e20]: Kvalita bydlení
+      - heading "Kam v Česku?" [level=1] [ref=e21]: Kamv Česku?
+      - paragraph [ref=e23]: Porovnejte čtvrti podle škol, klidu, bezpečnosti, dopravy a dalších — a najděte tu pravou pro sebe.
+      - search [ref=e24]:
+        - generic [ref=e25]: Adresa k prověření
+        - generic [ref=e26]:
+          - textbox "Adresa k prověření" [ref=e27]:
+            - /placeholder: Zadejte ulici nebo adresu…
+          - button "Prověřit adresu" [disabled] [ref=e28]
+        - paragraph [ref=e29]: Základní přehled zdarma · bez registrace
+      - generic [ref=e30]:
+        - link "Porovnat dvě adresy" [ref=e31] [cursor=pointer]:
+          - /url: /cs/compare
+        - link "Otevřít mapu" [ref=e32] [cursor=pointer]:
+          - /url: /cs/map
+      - generic [ref=e33]:
+        - generic [ref=e34]: 13 vrstev dat
+        - generic [ref=e35]: ·
+        - generic [ref=e36]: H3
+        - generic [ref=e37]: ·
+        - generic [ref=e38]: Veřejná data ČR
+    - generic [ref=e152]:
+      - generic [ref=e153]:
+        - generic [ref=e154]: Data
+        - heading "Co portál zobrazuje" [level=2] [ref=e155]
+      - generic [ref=e156]:
+        - generic [ref=e157]:
+          - generic [ref=e158]: "01"
+          - generic [ref=e159]: Základní školy
+        - generic [ref=e160]:
+          - generic [ref=e161]: "02"
+          - generic [ref=e162]: Mateřské školy
+        - generic [ref=e163]:
+          - generic [ref=e164]: "03"
+          - generic [ref=e165]: Dětská hřiště
+        - generic [ref=e166]:
+          - generic [ref=e167]: "04"
+          - generic [ref=e168]: Lékaři / kliniky
+        - generic [ref=e169]:
+          - generic [ref=e170]: "05"
+          - generic [ref=e171]: Lékárny
+        - generic [ref=e172]:
+          - generic [ref=e173]: "06"
+          - generic [ref=e174]: Zastávky MHD
+        - generic [ref=e175]:
+          - generic [ref=e176]: "07"
+          - generic [ref=e177]: Parky
+        - generic [ref=e178]:
+          - generic [ref=e179]: "08"
+          - generic [ref=e180]: Sportoviště
+        - generic [ref=e181]:
+          - generic [ref=e182]: "09"
+          - generic [ref=e183]: Obchody
+        - generic [ref=e184]:
+          - generic [ref=e185]: "10"
+          - generic [ref=e186]: Klid (hluk)
+        - generic [ref=e187]:
+          - generic [ref=e188]: "11"
+          - generic [ref=e189]: Bezpečnost
+        - generic [ref=e190]:
+          - generic [ref=e191]: "12"
+          - generic [ref=e192]: Kvalita SŠ
+        - generic [ref=e193]:
+          - generic [ref=e194]: "13"
+          - generic [ref=e195]: Kvalita ovzduší
+    - generic [ref=e197]:
+      - generic [ref=e198]:
+        - generic [ref=e199]: Postup
+        - heading "Jak to funguje?" [level=2] [ref=e200]
+      - generic [ref=e201]:
+        - generic [ref=e202]:
+          - generic [ref=e203]: "01"
+          - heading "Prozkoumej vrstvy" [level=3] [ref=e204]
+          - paragraph [ref=e205]: Školy, klid, bezpečnost, dopravu a další přímo na mapě.
+        - generic [ref=e206]:
+          - generic [ref=e207]: "02"
+          - heading "Nastav priority" [level=3] [ref=e208]
+          - paragraph [ref=e209]: V režimu „Podle mě" zvol, co je pro tebe důležité, a najdi svou čtvrť.
+        - generic [ref=e210]:
+          - generic [ref=e211]: "03"
+          - heading "Report podle adresy" [level=3] [ref=e212]
+          - paragraph [ref=e213]: Zadej konkrétní adresu a získej hodnocení jejího okolí.
+    - generic [ref=e215]:
+      - generic [ref=e216]:
+        - generic [ref=e217]: Report
+        - heading "Co dostanete v reportu" [level=2] [ref=e218]
+      - paragraph [ref=e219]: "Zadejte adresu nebo klikněte na mapu a stáhněte si detailní PDF o okolí:"
+      - generic [ref=e220]:
+        - generic [ref=e221]:
+          - generic [ref=e222]: ✓
+          - generic [ref=e223]: Nájemné v okolí (Kč/m²) + srovnání s městem
+        - generic [ref=e224]:
+          - generic [ref=e225]: ✓
+          - generic [ref=e226]: Co máte v okolí — obchody, MHD, škola… s odhadem vzdušnou čarou
+        - generic [ref=e227]:
+          - generic [ref=e228]: ✓
+          - generic [ref=e229]: Mapy dostupnosti — kam dojdete za 10 min pěšky i autem
+        - generic [ref=e230]:
+          - generic [ref=e231]: ✓
+          - generic [ref=e232]: Na co si dát pozor — rušná silnice, herna, železnice…
+        - generic [ref=e233]:
+          - generic [ref=e234]: ✓
+          - generic [ref=e235]: Povodňové riziko + hluk ve dne i v noci
+        - generic [ref=e236]:
+          - generic [ref=e237]: ✓
+          - generic [ref=e238]: Srovnání všech kategorií s průměrem města
+      - link "Zjistit kvalitu své adresy →" [ref=e239] [cursor=pointer]:
+        - /url: /cs/report
+        - text: Zjistit kvalitu své adresy
+        - generic [ref=e240]: →
+  - contentinfo [ref=e241]:
+    - generic [ref=e242]:
+      - paragraph [ref=e243]: Beta · hodnocení okolí, nikoli kontrola nemovitosti
+      - navigation "Informace o službě" [ref=e244]:
+        - link "Metodologie a zdroje" [ref=e245] [cursor=pointer]:
+          - /url: /cs/methodology
+        - link "Data a soukromí" [ref=e246] [cursor=pointer]:
+          - /url: /cs/privacy

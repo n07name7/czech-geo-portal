@@ -1,0 +1,9 @@
+[    1541ms] EvalError: Evaluating a string as JavaScript violates the following Content Security Policy directive because 'unsafe-eval' is not an allowed source of script: script-src 'self' 'unsafe-inline'".
+
+    at (app-pages-browser)/./node_modules/next/dist/compiled/@next/react-refresh-utils/dist/runtime.js (http://127.0.0.1:3000/_next/static/chunks/main-app.js?v=1789475152475:1150:26)
+    at options.factory (http://127.0.0.1:3000/_next/static/chunks/webpack.js?v=1789475152475:704:31)
+    at __webpack_require__ (http://127.0.0.1:3000/_next/static/chunks/webpack.js?v=1789475152475:29:33)
+    at __webpack_exec__ (http://127.0.0.1:3000/_next/static/chunks/main-app.js?v=1789475152475:1889:48)
+    at http://127.0.0.1:3000/_next/static/chunks/main-app.js?v=1789475152475:1890:37
+    at webpackJsonpCallback (http://127.0.0.1:3000/_next/static/chunks/webpack.js?v=1789475152475:1396:39)
+    at http://127.0.0.1:3000/_next/static/chunks/main-app.js?v=1789475152475:9:61

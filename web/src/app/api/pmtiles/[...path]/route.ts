@@ -47,15 +47,13 @@ export async function GET(
     return local ?? error(404, "not found");
   }
 
-  const configuredBase = process.env.R2_DATA_BASE_URL;
+  const configuredBase = process.env.R2_DATA_BASE_URL
+    || "https://github.com/n07name7/czech-geo-portal/releases/download/data-latest";
   if (!configuredBase) return error(503, "data source unavailable");
   let upstreamUrl: URL;
   try {
-    upstreamUrl = new URL(configuredBase.endsWith("/") ? configuredBase : `${configuredBase}/`);
-    if (upstreamUrl.protocol !== "https:" || upstreamUrl.username || upstreamUrl.password || upstreamUrl.search || upstreamUrl.hash) {
-      return error(503, "invalid data source configuration");
-    }
-    upstreamUrl = new URL(filename, upstreamUrl);
+    const base = configuredBase.endsWith("/") ? configuredBase : `${configuredBase}/`;
+    upstreamUrl = new URL(filename, base);
   } catch {
     return error(503, "invalid data source configuration");
   }
