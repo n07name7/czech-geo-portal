@@ -34,6 +34,13 @@ export default function PickMap({ lat, lon, onPick }: Props) {
       zoom: lat != null ? 14 : 7,
     });
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+    map.addControl(
+      new maplibregl.GeolocateControl({
+        positionOptions: { enableHighAccuracy: true },
+        trackUserLocation: true,
+      }),
+      "top-right"
+    );
     mapRef.current = map;
 
     const place = (la: number, lo: number) => {

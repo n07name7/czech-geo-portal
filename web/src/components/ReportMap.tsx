@@ -78,7 +78,15 @@ export default function ReportMap({ lat, lon, nearby, onScores, onStatus, legend
       // allow canvas snapshot for the PDF
       preserveDrawingBuffer: true,
     } as maplibregl.MapOptions);
-    map.addControl(new maplibregl.NavigationControl(), "top-right");
+    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+    map.addControl(
+      new maplibregl.GeolocateControl({
+        positionOptions: { enableHighAccuracy: true },
+        trackUserLocation: true,
+        showUserHeading: true,
+      }),
+      "top-right"
+    );
     mapRef.current = map;
 
     attachWhenStyleReady(map, () => {
