@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import type { CityConfig } from "@/lib/cities";
 
 interface Props {
@@ -9,14 +10,20 @@ interface Props {
   placeholder?: string;
 }
 
-export default function CitySearch({ cities, value, onChange, placeholder = "Hledat město…" }: Props) {
+export default function CitySearch({ cities, value, onChange, placeholder }: Props) {
+  const t = useTranslations("citySearch");
+  const searchLabel = placeholder ?? t("placeholder");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+
+  const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  
   const filtered = query.trim()
-    ? cities.filter((c) => c.name.toLowerCase().includes(query.toLowerCase()))
+    ? cities.filter((c) => norm(c.name).includes(norm(query)))
     : cities;
 
   // Close on outside click
@@ -25,26 +32,49 @@ export default function CitySearch({ cities, value, onChange, placeholder = "Hle
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setOpen(false);
         setQuery("");
+        setSelectedIndex(-1);
       }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  useEffect(() => {
+    setSelectedIndex(-1);
+  }, [query, open]);
+
   const select = (city: CityConfig) => {
     onChange(city);
     setOpen(false);
     setQuery("");
+    setSelectedIndex(-1);
   };
 
   const handleFocus = () => {
     setOpen(true);
     setQuery("");
+    setSelectedIndex(-1);
   };
 
   const handleKey = (e: React.KeyboardEvent) => {
-    if (e.key === "Escape") { setOpen(false); setQuery(""); inputRef.current?.blur(); }
-    if (e.key === "Enter" && filtered.length > 0) select(filtered[0]);
+    if (!open) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSelectedIndex((prev) => (prev + 1) % filtered.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelectedIndex((prev) => (prev - 1 + filtered.length) % filtered.length);
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (selectedIndex >= 0 && selectedIndex < filtered.length) select(filtered[selectedIndex]);
+      else if (filtered.length > 0) select(filtered[0]);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      setOpen(false);
+      setQuery("");
+      setSelectedIndex(-1);
+      inputRef.current?.blur();
+    }
   };
 
   return (
@@ -63,8 +93,8 @@ export default function CitySearch({ cities, value, onChange, placeholder = "Hle
           onChange={(e) => setQuery(e.target.value)}
           onFocus={handleFocus}
           onKeyDown={handleKey}
-          placeholder={placeholder}
-          aria-label={placeholder}
+          placeholder={searchLabel}
+          aria-label={searchLabel}
           className="flex-1 bg-transparent text-xs font-body text-[var(--text)] placeholder-[var(--text-faint)] outline-none min-w-0"
         />
         {/* chevron */}
@@ -81,15 +111,18 @@ export default function CitySearch({ cities, value, onChange, placeholder = "Hle
         <div className="absolute top-full left-0 right-0 z-50 bg-[var(--surface)] border border-t-0 border-[var(--border)] max-h-52 overflow-y-auto">
           {filtered.length === 0 ? (
             <div className="px-3 py-2 text-xs font-body text-[var(--text-faint)]">
-              Nic nenalezeno
+              {t("noResults")}
             </div>
           ) : (
-            filtered.map((city) => (
+            filtered.map((city, i) => (
               <button
                 key={city.id}
+                role="option"
+                aria-selected={i === selectedIndex}
                 onMouseDown={(e) => { e.preventDefault(); select(city); }}
+                onMouseEnter={() => setSelectedIndex(i)}
                 className={`flex items-center gap-2 w-full px-3 py-2 text-left text-xs font-body transition-colors border-b border-[var(--border)] last:border-b-0 ${
-                  city.id === value.id
+                  i === selectedIndex || city.id === value.id
                     ? "text-[var(--accent)] bg-[var(--accent-glow)]"
                     : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--card)]"
                 }`}

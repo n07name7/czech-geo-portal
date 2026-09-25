@@ -3,32 +3,46 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/copy-maplibre-worker.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/copy-maplibre-worker.mjs",
     "build": "next build",
     "start": "next start",
+    "start:local": "REPORT_PREVIEW_SECRET=$(openssl rand -hex 32) PMTILES_LOCAL_DIR=../etl/output/cities next start",
     "lint": "next lint",
     "test": "vitest run"
   },
   "dependencies": {
+    "@mapbox/vector-tile": "^3.0.0",
     "@pdf-lib/fontkit": "^1.1.1",
-    "maplibre-gl": "^5.24.0",
-    "next": "14.2.35",
-    "next-intl": "^4.11.0",
+    "maplibre-gl": "^6.9.0",
+    "next": "^15.5.25",
+    "next-intl": "^4.14.4",
+    "pbf": "^5.1.2",
     "pdf-lib": "^1.17.1",
-    "pmtiles": "^4.4.1",
+    "pmtiles": "^4.5.0",
+    "qrcode": "^1.5.4",
     "react": "^18",
     "react-dom": "^18"
   },
   "devDependencies": {
-    "@types/maplibre-gl": "^1.13.2",
     "@types/node": "^20",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@vitejs/plugin-react": "^6.1.1",
     "eslint": "^8",
-    "eslint-config-next": "14.2.35",
-    "postcss": "^8",
+    "eslint-config-next": "^15.5.25",
+    "jsdom": "^30.1.0",
+    "postcss": "^8.5.28",
+    "puppeteer": "^25.11.0",
     "tailwindcss": "^3.4.1",
     "typescript": "^5",
+    "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^3.2.7"
+  },
+  "overrides": {
+    "fflate": "^0.8.3",
+    "postcss": "^8.5.28"
   }
 }

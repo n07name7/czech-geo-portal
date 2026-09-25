@@ -23,4 +23,24 @@ describe("address comparison", () => {
     expect(result.winner).toBe("tie");
     expect(result.reason).toContain("very close");
   });
+
+  it("returns a Russian recommendation for the Russian locale", () => {
+    const result = compareAddresses({ a: familyFriendly, b: transitHeavy, profile: "family", locale: "ru" });
+
+    expect(result.winner).toBe("a");
+    expect(result.reason).toContain("Адрес A");
+    expect(result.reason).toContain("семьи");
+  });
+
+  it("does not declare a winner for scores normalized in different cities", () => {
+    const result = compareAddresses({
+      a: familyFriendly,
+      b: transitHeavy,
+      profile: "family",
+      locale: "en",
+      comparable: false,
+    });
+    expect(result.winner).toBe("incomparable");
+    expect(result.reason).toContain("different cities");
+  });
 });

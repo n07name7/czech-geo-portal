@@ -1,4 +1,14 @@
 {
+  "error": {
+    "title": "Something went wrong",
+    "description": "The page could not finish loading. We did not submit your data; please try again.",
+    "retry": "Try again",
+    "home": "Go to homepage"
+  },
+  "citySearch": {
+    "placeholder": "Search cities…",
+    "noResults": "No cities found"
+  },
   "ui": {
     "city": "City",
     "layers": "Layers",
@@ -34,11 +44,16 @@
     "map": "Map",
     "compare": "Compare",
     "methodology": "Methodology",
-    "report": "Report"
+    "languageTo": "Switch language to {language}",
+    "report": "Report",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
   },
   "landing": {
     "headline": "Where in Czechia?",
-    "subheadline": "Compare neighbourhoods by schools, quiet, safety, transport and more — and find the right one for you.",
+    "headlineAccent": "in Czechia?",
+    "brandShort": "WiC",
+    "subheadline": "Compare neighbourhoods by schools, quiet, safety, transport and more - and find the right one for you.",
     "cta": "Open map",
     "ctaCompare": "Compare two addresses",
     "layersTitle": "What the portal shows",
@@ -57,18 +72,22 @@
     "searchPlaceholder": "Enter a street or address…",
     "searchCta": "Check address",
     "searching": "Searching…",
+    "searchUnavailable": "Address search is temporarily unavailable. Please try again.",
     "searchNote": "Basic overview free · no sign-up",
     "reportShowcaseTitle": "What you get in the report",
-    "reportShowcaseLead": "Enter an address or click the map and download a detailed PDF about the neighbourhood:"
+    "reportShowcaseLead": "Enter an address or click the map and download a detailed PDF about the neighbourhood:",
+    "sectionData": "Data",
+    "sectionSteps": "Process",
+    "sectionReport": "Report"
   },
   "methodology": {
     "title": "Methodology",
     "aboutTitle": "About the project",
-    "aboutText": "We help you choose the right place to live. For every neighborhood we show the availability and quality of nearby infrastructure on an H3 hex grid — from schools and shops to transport, quiet and safety. Built for locals and expats looking for the ideal neighborhood. City coverage is expanding over time.",
+    "aboutText": "We help you choose the right place to live. For every neighborhood we show the availability and quality of nearby infrastructure on an H3 hex grid - from schools and shops to transport, quiet and safety. Built for locals and expats looking for the ideal neighborhood. City coverage is expanding over time.",
     "sourcesTitle": "Data sources",
     "scoringTitle": "How the score is calculated",
-    "scoringText": "We split the city into H3 hex cells (~150×150 m). For most layers we count objects within 800 m of the cell center (≈10 min walk). Quiet is derived from strategic noise maps (less noise = higher score) and safety from crime density (fewer incidents = higher score). Scores are normalized 0–1 within each city — 1 is the best value in the city, 0 the worst.",
-    "matchTitle": "Match me — your own weights",
+    "scoringText": "We split the city into H3 hex cells (~150×150 m). For most layers we count objects within 800 m of the cell center (≈10 min walk). Quiet is derived from strategic noise maps (less noise = higher score) and safety from crime density (fewer incidents = higher score). Scores are normalized 0-1 within each city - 1 is the best value in the city, 0 the worst.",
+    "matchTitle": "Match me - your own weights",
     "matchText": "In “Match me” mode you set how important each criterion is. The map computes a weighted average of all layer scores and instantly colors neighborhoods by how well they fit your priorities. Move the sliders and watch the best-fitting areas update in real time."
   },
   "basemap": {
@@ -83,14 +102,39 @@
     "addressA": "Address A",
     "addressB": "Address B",
     "placeholder": "Enter a street or address…",
+    "searchUnavailable": "Address search is temporarily unavailable. Please try again.",
+    "scoreLoading": "Loading ratings for both addresses…",
+    "scoreOutside": "One of the addresses is not yet covered by our data.",
+    "scoreUnavailable": "Rating data is temporarily unavailable. The addresses were selected correctly; the data source is currently failing.",
+    "retryScores": "Retry rating data",
     "change": "Change address",
     "openReport": "Open detailed report",
-    "recommendation": "Recommendation"
+    "recommendation": "Recommendation",
+    "detailsTitle": "Differences that affect the decision",
+    "detailsLead": "Scores are relative within each city. Higher is better; for rent, lower is more favourable.",
+    "betterA": "A advantage",
+    "betterB": "B advantage",
+    "close": "No meaningful difference",
+    "withinCity": "Within-city percentile",
+    "rentDiff": "{value} CZK/m²/mo difference",
+    "scoreDiff": "{value}-point difference",
+    "criterion": {
+      "rent": "Rent",
+      "transport": "Public transport",
+      "safety": "Safety signal",
+      "quiet": "Quiet",
+      "schools": "Primary schools",
+      "shops": "Shops",
+      "air": "Air quality"
+    }
   },
   "report": {
+    "copyLink": "Copy link",
+    "copied": "Copied!",
     "title": "Address report",
-    "subtitle": "Enter an address to get a quality overview of the surroundings — schools, quiet, safety, transport and more.",
+    "subtitle": "Enter an address to get a quality overview of the surroundings - schools, quiet, safety, transport and more.",
     "placeholder": "Enter an address (street, city)…",
+    "searchUnavailable": "Address search is temporarily unavailable. Please try again.",
     "hint": "Start by entering an address above.",
     "loading": "Loading location data…",
     "noData": "No data for this address yet (outside covered cities).",
@@ -98,7 +142,8 @@
     "pdfTitle": "Full report",
     "pdfDesc": "The full PDF report also includes:",
     "pdfDownload": "Download PDF",
-    "pdfWait": "Redirecting…",
+    "pdfWait": "Preparing PDF…",
+    "pdfError": "The PDF could not be prepared. Please try again.",
     "pdfBuy": "Buy PDF for {price} CZK",
     "proHint": "Searching often? Try",
     "proLink": "Pro subscription",
@@ -109,19 +154,19 @@
     "radiusNote": "Counts within 800 m of the address (≈10 min walk); safety over the last 12 months. School quality: best secondary school within 3 km by entrance-exam percentile (CERMAT).",
     "mapLegend": "Area colour = overall location rating (brighter = better)",
     "percentile": " pct",
-    "premiumTitle": "Premium — in the full report",
+    "premiumTitle": "Premium - in the full report",
     "unlock": "Unlock full report for {price} CZK",
     "pdfFree": "Download PDF (free preview)",
-    "premiumFree": "Premium — free for now (beta)",
+    "premiumFree": "Premium - free for now (beta)",
     "nearbyTitle": "What's nearby",
-    "nearbyDesc": "Closest named places from the address (walking).",
-    "nearWalk": "min walk",
+    "nearbyDesc": "Closest named places; time is a rough estimate from straight-line distance, not a walking route.",
+    "nearWalk": "min · straight-line estimate",
     "nearNone": "none within range",
     "nearCat": {
       "supermarket": "Supermarket",
       "pharmacy": "Pharmacy",
       "health": "Doctor / hospital",
-      "school": "Primary school",
+      "school": "School",
       "transit": "Transit stop",
       "park": "Park"
     },
@@ -136,28 +181,51 @@
     "isoWalk": "10 minutes on foot",
     "isoDrive": "10 minutes by car",
     "pdfPreparing": "Preparing data…",
-    "pickOpen": "📍 Or pick a spot on the map",
+    "pickOpen": "Or pick a spot on the map",
     "pickHide": "Hide map",
     "pickHint": "Click the map to choose a spot (no address needed).",
     "scoreCtx": "relative to the city",
     "profileTitle": "Who are you choosing for?",
     "profileLead": "We adapt the score and recommendation to what matters to you.",
     "profile": {
-      "balanced": { "label": "Balanced", "desc": "a general view of the area" },
-      "family": { "label": "For a family", "desc": "schools, childcare, quiet and safety" },
-      "renter": { "label": "For renting", "desc": "transit, services and local price" },
-      "student": { "label": "For a student", "desc": "access, services and free time" }
+      "balanced": {
+        "label": "Balanced",
+        "desc": "a general view of the area"
+      },
+      "family": {
+        "label": "For a family",
+        "desc": "schools, childcare, quiet and safety"
+      },
+      "renter": {
+        "label": "For renting",
+        "desc": "transit, services and everyday access"
+      },
+      "student": {
+        "label": "For a student",
+        "desc": "access, services and free time"
+      }
     },
     "decisionTitle": "Decision summary",
     "strengths": "Strengths",
     "watchOuts": "Watch-outs",
     "feat": {
       "rent": "Local rent (CZK/m²) + comparison to the city",
-      "nearby": "What's nearby — shops, transit, school… with walking time",
-      "reach": "Reach maps — where you get in 10 min on foot & by car",
-      "flags": "Watch-outs — busy road, gambling hall, railway…",
+      "nearby": "What's nearby - shops, transit, school… with a straight-line estimate",
+      "reach": "Reach maps - where you get in 10 min on foot & by car",
+      "flags": "Watch-outs - busy road, gambling hall, railway…",
       "env": "Flood risk + day & night noise",
       "city": "Every category vs the city average"
-    }
+    },
+    "dataPartial": "Some optional online data is temporarily unavailable. You can still download the PDF, but the affected sections will be omitted; a missing response does not mean there is no risk.",
+    "retryPdf": "Retry PDF data",
+    "scoreUnavailable": "Rating data is temporarily unavailable. The address was selected correctly; the data source is currently failing.",
+    "scoreOutside": "This address is not covered by our data yet.",
+    "retryScores": "Retry rating data"
+  },
+  "footer": {
+    "beta": "Beta · neighbourhood assessment, not a property inspection",
+    "linksLabel": "Service information",
+    "methodology": "Methodology and sources",
+    "privacy": "Data and privacy"
   }
 }

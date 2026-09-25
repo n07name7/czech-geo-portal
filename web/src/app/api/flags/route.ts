@@ -1,12 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { BoundedTtlCache, fetchWithTimeout, isCzechCoordinate, UpstreamTimeoutError } from "../_lib/hardening";
+import { BodyTooLargeError, clientIdentifier, ConcurrencyLimitError, liveApiLimiter, readLimitedJson, readLimitedResponseJson, runProtectedUpstream } from "../_lib/request-protection";
 
 export const runtime = "nodejs";
 
-// "Red flags" near an address — the downsides a listing won't mention: a busy
+// "Red flags" near an address - the downsides a listing won't mention: a busy
 // road, railway, gambling hall, industrial zone, nightclub. Live OSM Overpass
 // query around the point; nearest distance per category. Cached, soft-fails.
 
-const OVERPASS = "https://overpass-api.de/api/interpreter";
+const OVERPASS = process.env.OVERPASS_URL || "https://overpass-api.de/api/interpreter";
 
 type Cat = "road" | "railway" | "gambling" | "industrial" | "nightclub";
 
@@ -20,8 +22,8 @@ type El = {
   members?: { geometry?: Coord[] }[];
 };
 
-const cache = new Map<string, { at: number; data: Record<string, { dist: number }> }>();
 const TTL = 60 * 60 * 1000;
+const cache = new BoundedTtlCache<Record<string, { dist: number }>>(256, TTL);
 
 function haversine(aLat: number, aLon: number, bLat: number, bLon: number): number {
   const R = 6371000;
@@ -50,19 +52,23 @@ function categorize(t: Record<string, string>): Cat | null {
 }
 
 export async function POST(req: NextRequest) {
+  if (!liveApiLimiter.allow(clientIdentifier(req.headers)))
+    return NextResponse.json({ error: "rate limit" }, { status: 429, headers: { "Retry-After": "60" } });
   let lat: number, lon: number;
   try {
-    const b = await req.json();
-    lat = Number(b.lat); lon = Number(b.lon);
-  } catch {
+    const b = await readLimitedJson(req, 1_024) as { lat?: unknown; lon?: unknown };
+    if (!isCzechCoordinate(b.lat, b.lon))
+      return NextResponse.json({ error: "bad coords" }, { status: 400 });
+    lat = b.lat; lon = b.lon as number;
+  } catch (error) {
+    if (error instanceof BodyTooLargeError)
+      return NextResponse.json({ error: "body too large" }, { status: 413 });
     return NextResponse.json({ error: "bad body" }, { status: 400 });
   }
-  if (!Number.isFinite(lat) || !Number.isFinite(lon))
-    return NextResponse.json({ error: "bad coords" }, { status: 400 });
 
   const key = `${lat.toFixed(4)},${lon.toFixed(4)}`;
   const hit = cache.get(key);
-  if (hit && Date.now() - hit.at < TTL) return NextResponse.json(hit.data);
+  if (hit) return NextResponse.json(hit);
 
   const q = `[out:json][timeout:25];
 (
@@ -81,16 +87,25 @@ out geom;`;
 
   let elements: El[];
   try {
-    const res = await fetch(OVERPASS, {
+    // Overpass permits 25 seconds of query execution - the same budget as
+    // /api/nearby (same upstream, same out-geom pattern): real queries run
+    // 7-10 s, so a shorter timeout would reject healthy responses.
+    const res = await runProtectedUpstream("flags", key, () => fetchWithTimeout(OVERPASS, {
       method: "POST",
       headers: { "Content-Type": "text/plain", "User-Agent": "Czech-Geo-Portal/1.0" },
       body: q,
-    });
-    if (!res.ok) return NextResponse.json({}, { status: 200 });
-    const json = (await res.json()) as { elements?: El[] };
-    elements = json.elements ?? [];
-  } catch {
-    return NextResponse.json({}, { status: 200 });
+    }, 30_000));
+    if (!res.ok) return NextResponse.json({ error: "upstream unavailable" }, { status: 502 });
+    const json = (await readLimitedResponseJson(res)) as { elements?: El[]; remark?: string };
+    if (!Array.isArray(json.elements) || json.remark)
+      return NextResponse.json({ error: "upstream unavailable" }, { status: 502 });
+    elements = json.elements;
+  } catch (error) {
+    if (error instanceof ConcurrencyLimitError)
+      return NextResponse.json({ error: "server busy" }, { status: 503, headers: { "Retry-After": "2" } });
+    if (error instanceof UpstreamTimeoutError)
+      return NextResponse.json({ error: "upstream timeout" }, { status: 504 });
+    return NextResponse.json({ error: "upstream unavailable" }, { status: 502 });
   }
 
   const nearest: Partial<Record<Cat, { dist: number }>> = {};
@@ -108,6 +123,6 @@ out geom;`;
   }
 
   const data = nearest as Record<string, { dist: number }>;
-  cache.set(key, { at: Date.now(), data });
+  cache.set(key, data);
   return NextResponse.json(data);
 }

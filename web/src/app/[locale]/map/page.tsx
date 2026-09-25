@@ -17,8 +17,8 @@ const MapView = dynamic(() => import("@/components/MapView"), {
   ssr: false,
   loading: () => (
     <div className="w-full h-full bg-[var(--bg)] flex items-center justify-center">
-      <span className="font-body text-xs tracking-widest uppercase text-[var(--text-faint)]">
-        Načítání mapy…
+      <span className="font-body text-xs tracking-widest uppercase text-[var(--text-faint)] animate-pulse">
+        ⏳
       </span>
     </div>
   ),
@@ -83,7 +83,7 @@ export default function MapPage() {
         onChange={setActiveBasemap}
       />
 
-      {/* Floating Hex Toggle — Styled like MapLibre native controls, sits right below them */}
+      {/* Floating Hex Toggle - Styled like MapLibre native controls, sits right below them */}
       <div className="absolute top-[160px] right-[10px] z-10 flex flex-col border border-[var(--border)] bg-[var(--surface)] shadow-sm">
         <button
           onClick={() => setHexVisible((v) => !v)}

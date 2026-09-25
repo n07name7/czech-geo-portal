@@ -1,14 +1,27 @@
 from .overpass import query_overpass
 
+# We use nwr (node, way, relation) to capture area features.
+# Overpass is configured (in overpass.py) to return the center point for ways and relations.
 LAYER_QUERIES: dict[str, str] = {
-    "playgrounds": 'node["leisure"="playground"]({bbox});',
-    "parks":       'way["leisure"="park"]({bbox}); relation["leisure"="park"]({bbox});',
-    "sports":      'node["leisure"="sports_centre"]({bbox}); node["leisure"="pitch"]({bbox});',
-    "shops":       'node["shop"="supermarket"]({bbox}); node["shop"="convenience"]({bbox});',
+    "playgrounds": 'nwr["leisure"="playground"]({bbox});',
+    "parks": (
+        'nwr["leisure"~"park|nature_reserve|garden"]({bbox}); '
+        'nwr["landuse"~"forest|recreation_ground|meadow|orchard"]({bbox}); '
+        'nwr["natural"~"wood|scrub|heath"]({bbox}); '
+        'nwr["boundary"="national_park"]({bbox});'
+    ),
+    "sports": (
+        'nwr["leisure"~"sports_centre|pitch|stadium|track|fitness_station|fitness_centre|swimming_pool"]({bbox}); '
+        'nwr["amenity"="swimming_pool"]({bbox}); '
+        'nwr["sport"]({bbox});'
+    ),
+    "shops": (
+        'nwr["shop"~"supermarket|convenience|bakery|butcher|greengrocer|deli|health_food|mall|department_store|general"]({bbox}); '
+        'nwr["amenity"="market"]({bbox});'
+    ),
 }
 
 PRAGUE_BBOX = (49.94, 14.22, 50.18, 14.71)  # (south, west, north, east)
-
 
 def fetch_osm_pois(
     layer: str,

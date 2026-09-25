@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import LanguageSwitcher from "./LanguageSwitcher";
@@ -10,8 +11,10 @@ interface Props {
 
 export default function NavBar({ floating = false }: Props) {
   const t = useTranslations("nav");
+  const tLanding = useTranslations("landing");
   const locale = useLocale();
   const pathname = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const isActive = (href: string) => pathname === href;
 
@@ -26,37 +29,66 @@ export default function NavBar({ floating = false }: Props) {
         : "text-[var(--text-muted)] hover:text-[var(--text)]"
     }`;
 
+  const links = [
+    { href: `/${locale}/map`, label: t("map"), alwaysVisible: true },
+    { href: `/${locale}/compare`, label: t("compare"), alwaysVisible: false },
+    { href: `/${locale}/report`, label: t("report"), alwaysVisible: true },
+    { href: `/${locale}/methodology`, label: t("methodology"), alwaysVisible: false },
+  ];
+
   return (
-    <nav className={`${bgClass} h-12 flex items-center px-4 sm:px-6 gap-4 sm:gap-8`}>
-      <Link
-        href={`/${locale}`}
-        className="font-display text-[var(--text)] text-sm tracking-widest uppercase mr-auto truncate"
-      >
-        <span className="hidden xs:inline">Kam v Česku?</span>
-        <span className="xs:hidden">KvČ</span>
-      </Link>
+    <>
+      <nav className={`${bgClass} h-12 flex items-center px-4 sm:px-6 gap-4 sm:gap-8`}>
+        <Link
+          href={`/${locale}`}
+          className="font-display text-[var(--text)] text-sm tracking-widest uppercase mr-auto truncate"
+        >
+          <span className="hidden xs:inline">{tLanding("headline")}</span>
+          <span className="xs:hidden">{tLanding("brandShort")}</span>
+        </Link>
 
-      <Link href={`/${locale}/map`} className={linkCls(`/${locale}/map`)}>
-        {t("map")}
-      </Link>
+        {/* Desktop links */}
+        {links.map(({ href, label, alwaysVisible }) => (
+          <Link
+            key={href}
+            href={href}
+            className={`${linkCls(href)} ${alwaysVisible ? "" : "hidden sm:inline"}`}
+          >
+            {label}
+          </Link>
+        ))}
 
-      <Link href={`/${locale}/compare`} className={`${linkCls(`/${locale}/compare`)} hidden sm:inline`}>
-        {t("compare")}
-      </Link>
+        <LanguageSwitcher />
 
-      <Link href={`/${locale}/report`} className={linkCls(`/${locale}/report`)}>
-        {t("report")}
-      </Link>
+        {/* Mobile burger button - only shows when some links are hidden */}
+        <button
+          type="button"
+          onClick={() => setMenuOpen((v) => !v)}
+          className="sm:hidden flex flex-col gap-[3px] justify-center w-6 h-6 text-[var(--text-muted)]"
+          aria-label={menuOpen ? t("closeMenu") : t("openMenu")}
+          aria-expanded={menuOpen}
+        >
+          <span className={`block h-[1.5px] w-full bg-current transition-transform ${menuOpen ? "translate-y-[4.5px] rotate-45" : ""}`} />
+          <span className={`block h-[1.5px] w-full bg-current transition-opacity ${menuOpen ? "opacity-0" : ""}`} />
+          <span className={`block h-[1.5px] w-full bg-current transition-transform ${menuOpen ? "-translate-y-[4.5px] -rotate-45" : ""}`} />
+        </button>
+      </nav>
 
-      {/* Hide on very small screens */}
-      <Link
-        href={`/${locale}/methodology`}
-        className={`${linkCls(`/${locale}/methodology`)} hidden sm:inline`}
-      >
-        {t("methodology")}
-      </Link>
-
-      <LanguageSwitcher />
-    </nav>
+      {/* Mobile dropdown menu */}
+      {menuOpen && (
+        <div className={`${floating ? "absolute top-12 inset-x-0 z-20 bg-[#0b0d12]/95 backdrop-blur-md" : "bg-[var(--bg)]"} sm:hidden border-b border-[var(--border)]`}>
+          {links.filter((l) => !l.alwaysVisible).map(({ href, label }) => (
+            <Link
+              key={href}
+              href={href}
+              onClick={() => setMenuOpen(false)}
+              className={`block px-6 py-3 ${linkCls(href)} border-b border-[var(--border)] last:border-b-0`}
+            >
+              {label}
+            </Link>
+          ))}
+        </div>
+      )}
+    </>
   );
 }

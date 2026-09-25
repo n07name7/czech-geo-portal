@@ -3,59 +3,16 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import { PDFDocument, rgb, pushGraphicsState, popGraphicsState, rectangle, clip, endPath, type PDFFont, type PDFPage, type RGB } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
-import { PAYMENTS_LIVE, stripeSecret } from "@/lib/payment";
+import QRCode from "qrcode";
+import { canVerifyLiveSession, stripeSecret, PAYMENTS_VISIBLE } from "../../../../lib/payment";
+import { getPdfCopy, type PdfFlagId, type PdfLayerId, type PdfNearbyId } from "../../../../lib/pdf-copy";
+import { verifyPreviewToken } from "../../../../lib/preview-token";
+import { validateReportPayload } from "../../../../lib/report-payload";
+import { BodyTooLargeError, clientIdentifier, ConcurrencyGate, ConcurrencyLimitError, FixedWindowRateLimiter, readLimitedJson } from "../../_lib/request-protection";
 
 export const runtime = "nodejs";
-
-const LAYER_LABELS: Record<string, string> = {
-  schools: "Základní školy",
-  kindergartens: "Mateřské školy",
-  playgrounds: "Dětská hřiště",
-  clinics: "Lékaři / kliniky",
-  pharmacies: "Lékárny",
-  transport: "Zastávky MHD",
-  parks: "Parky",
-  sports: "Sportoviště",
-  shops: "Obchody",
-  quiet: "Klid (hluk)",
-  safety: "Bezpečnost",
-  highschool: "Kvalita SŠ",
-  air: "Kvalita ovzduší",
-};
-
-const GROUPS: { title: string; ids: string[] }[] = [
-  { title: "Doprava", ids: ["transport"] },
-  { title: "Vzdělávání", ids: ["kindergartens", "schools", "highschool"] },
-  { title: "Zdraví", ids: ["clinics", "pharmacies"] },
-  { title: "Prostředí", ids: ["parks", "quiet", "air"] },
-  { title: "Služby", ids: ["playgrounds", "sports", "shops"] },
-  { title: "Bezpečnost", ids: ["safety"] },
-];
-
-const SOURCES = [
-  "Školy/školky: Rejstřík škol MŠMT + RÚIAN (ČÚZK)",
-  "Lékaři, lékárny: NRPZS / ÚZIS ČR (CC BY 4.0)",
-  "Klid (hluk): Strategické hlukové mapy 2022, MZ ČR",
-  "Bezpečnost: Mapa kriminality, Policie ČR",
-  "Kvalita SŠ: Přijímací zkoušky CERMAT",
-  "Kvalita ovzduší: Pětileté průměry PM2.5, ČHMÚ",
-  "Ostatní: OpenStreetMap (ODbL)",
-];
-
-function metricText(id: string, n: number): string {
-  if (id === "quiet") return n > 0 ? `${n} dB` : "tichá zóna";
-  if (id === "safety") return `${n} případů/rok`;
-  if (id === "highschool") return n > 0 ? `${n}. percentil` : "—";
-  if (id === "air") return n > 0 ? `${n} µg/m³` : "—";
-  return `${n} do 800 m`;
-}
-
-function verdict(v: number): string {
-  if (v >= 0.65) return "Výborná lokalita pro bydlení";
-  if (v >= 0.5) return "Dobrá lokalita pro bydlení";
-  if (v >= 0.35) return "Průměrná lokalita";
-  return "Podprůměrná lokalita";
-}
+const pdfLimiter = new FixedWindowRateLimiter(6, 60_000, 1_024);
+const pdfGate = new ConcurrencyGate(2);
 
 // ── dark theme palette ──────────────────────────────────────────────────────
 const BG = rgb(0.043, 0.051, 0.071);
@@ -76,9 +33,15 @@ function scoreColor(v: number): RGB {
   return rgb(0.16, 0.3, 0.3);
 }
 
-async function sessionPaid(session: string | null): Promise<boolean> {
+async function sessionPaid(
+  session: string | null,
+  previewToken: unknown,
+  report: { address: string; scores: Record<string, number> },
+): Promise<boolean> {
+  if (verifyPreviewToken(previewToken, report, process.env.REPORT_PREVIEW_SECRET ?? "")) return true;
+  if (!PAYMENTS_VISIBLE) return true; // Free mode!
   if (!session) return false;
-  if (!PAYMENTS_LIVE) return session.startsWith("mock_");
+  if (!canVerifyLiveSession(session)) return false;
   const res = await fetch(`https://api.stripe.com/v1/checkout/sessions/${session}`,
     { headers: { Authorization: `Bearer ${stripeSecret}` } });
   if (!res.ok) return false;
@@ -90,40 +53,52 @@ function loadFont(name: string): Uint8Array {
 }
 
 export async function POST(req: NextRequest) {
-  // Accept either JSON (fetch) or a form post with a `payload` field. The form
-  // path lets the browser download via Content-Disposition instead of opening a
-  // blob in a viewer tab (reliable file download on mobile).
   const ct = req.headers.get("content-type") || "";
-  let body: Record<string, unknown> = {};
-  if (ct.includes("application/json")) {
-    body = await req.json().catch(() => ({}));
-  } else {
-    const form = await req.formData().catch(() => null);
-    const payload = form?.get("payload");
-    if (typeof payload === "string") { try { body = JSON.parse(payload); } catch { /* ignore */ } }
+  if (!ct.includes("application/json"))
+    return NextResponse.json({ error: "unsupported media type" }, { status: 415 });
+  if (!pdfLimiter.allow(clientIdentifier(req.headers)))
+    return NextResponse.json({ error: "rate limit" }, { status: 429, headers: { "Retry-After": "60" } });
+
+  let body: Record<string, unknown>;
+  try {
+    body = await readLimitedJson(req, 5_000_000) as Record<string, unknown>;
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof BodyTooLargeError ? "payload_too_large" : "bad_body" },
+      { status: error instanceof BodyTooLargeError ? 413 : 400 },
+    );
   }
-  const { address, scores, session, mapImage, cityAvg, cityName, nearby, rent, rentCity, rentQuarter, isoWalk, isoDrive, flood, flags } = body as {
-    address?: string; scores?: Record<string, number>; session?: string | null;
+
+  const validation = validateReportPayload(body);
+  if (!validation.ok)
+    return NextResponse.json({ error: validation.error }, { status: validation.error === "payload_too_large" ? 413 : 400 });
+
+  const { address, scores, session, previewToken, locale, mapImage, cityAvg, cityName, nearby, rent, rentCity, rentQuarter, isoWalk, isoDrive, flood, flags, unavailableSources } = body as {
+    address: string; scores: Record<string, number>; session?: string | null;
+    previewToken?: string | null;
+    locale?: string;
     mapImage?: string; cityAvg?: Record<string, number>; cityName?: string;
     nearby?: Record<string, { name: string; dist: number; min: number }>;
     rent?: number; rentCity?: number; rentQuarter?: string;
     isoWalk?: { img: string; area?: number }; isoDrive?: { img: string; area?: number };
     flood?: number;
     flags?: Record<string, { dist: number }>;
+    unavailableSources?: string[];
   };
 
-  if (!(await sessionPaid(session ?? null)))
+  if (!(await sessionPaid(session ?? null, previewToken, { address, scores })))
     return NextResponse.json({ error: "payment_required" }, { status: 402 });
-  if (!scores || typeof scores !== "object")
-    return NextResponse.json({ error: "missing_scores" }, { status: 400 });
 
+  try {
+    return await pdfGate.run(async () => {
   const doc = await PDFDocument.create();
   doc.registerFontkit(fontkit);
   const font = await doc.embedFont(loadFont("DejaVuSans.ttf"));
   const bold = await doc.embedFont(loadFont("DejaVuSans-Bold.ttf"));
 
   const W = 595, H = 842, M = 44;
-  const ids = Object.keys(LAYER_LABELS).filter((k) => k in scores);
+  const copy = getPdfCopy(locale);
+  const ids = (Object.keys(copy.layers) as PdfLayerId[]).filter((k) => k in scores);
   const overall = ids.reduce((a, k) => a + (Number(scores[k]) || 0), 0) / Math.max(ids.length, 1);
 
   // ── drawing helpers ───────────────────────────────────────────────────────
@@ -146,7 +121,7 @@ export async function POST(req: NextRequest) {
     return { page, text, textC, textR, arc };
   };
 
-  // ════════════════════════════ PAGE 1 — overview ════════════════════════════
+  // ════════════════════════════ PAGE 1 - overview ════════════════════════════
   const p1 = doc.addPage([W, H]);
   p1.drawRectangle({ x: 0, y: 0, width: W, height: H, color: BG });
   const g1 = mk(p1);
@@ -154,15 +129,31 @@ export async function POST(req: NextRequest) {
   // hero band
   p1.drawRectangle({ x: 0, y: H - 96, width: W, height: 96, color: CARD });
   p1.drawRectangle({ x: 0, y: H - 96, width: 4, height: 96, color: ACCENT });
-  g1.text("KAM V ČESKU?", M, H - 38, 9, bold, ACCENT);
-  g1.text("Report podle adresy", M, H - 64, 22, bold, TEXT);
-  g1.text(String(address ?? "—"), M, H - 82, 11, font, MUTED);
-  const date = new Date().toLocaleDateString("cs-CZ");
-  g1.textR(`Vygenerováno ${date}`, W - M, H - 82, 9, font, FAINT);
+  
+  const date = new Date().toLocaleDateString(copy.dateLocale);
+  
+  // QR Code
+  try {
+    const host = req.headers.get("host") || "localhost:3000";
+    const forwardedProto = req.headers.get("x-forwarded-proto");
+    const isLocal = host.includes("localhost") || host.includes(":3000") || host.startsWith("10.") || host.startsWith("192.");
+    const protocol = forwardedProto || (isLocal ? "http" : "https");
+    const reportUrl = `${protocol}://${host}/${locale || 'cs'}/report?address=${encodeURIComponent(address || '')}`;
+    const qrDataUrl = await QRCode.toDataURL(reportUrl, { margin: 1, color: { dark: '#000000', light: '#ffffff' } });
+    const qrImage = await doc.embedPng(Buffer.from(qrDataUrl.split(",")[1], "base64"));
+    p1.drawImage(qrImage, { x: W - M - 64, y: H - 80, width: 64, height: 64 });
+    g1.textR(copy.generated(date), W - M - 76, H - 76, 9, font, FAINT);
+  } catch {
+    g1.textR(copy.generated(date), W - M, H - 82, 9, font, FAINT);
+  }
+
+  g1.text(copy.brand, M, H - 38, 9, bold, ACCENT);
+  g1.text(copy.reportTitle, M, H - 64, 22, bold, TEXT);
+  g1.text(String(address ?? "-"), M, H - 82, 11, font, MUTED);
 
   let y = H - 96;
 
-  // ── neighborhood map — full-width banner, fills edge-to-edge (cover-fit) ────
+  // ── neighborhood map - full-width banner, fills edge-to-edge (cover-fit) ────
   const bx = M, bw = W - 2 * M, bTop = y - 14, bh = 250, bBot = bTop - bh;
   p1.drawRectangle({ x: bx, y: bBot, width: bw, height: bh, color: CARD, borderColor: LINE, borderWidth: 1 });
   if (typeof mapImage === "string" && mapImage.startsWith("data:image/png")) {
@@ -186,25 +177,21 @@ export async function POST(req: NextRequest) {
   const legColors = [scoreColor(0.15), scoreColor(0.5), scoreColor(0.9)];
   const lgX = bx + 12, lgY = bBot + 12;
   p1.drawRectangle({ x: lgX - 6, y: lgY - 6, width: 150, height: 26, color: rgb(0.04, 0.05, 0.07), opacity: 0.82 });
-  g1.text("hůř", lgX, lgY + 6, 7, font, MUTED);
+  g1.text(copy.map.worse, lgX, lgY + 6, 7, font, MUTED);
   const swX = lgX + 22;
   legColors.forEach((c, i) => p1.drawRectangle({ x: swX + i * 11, y: lgY + 6, width: 11, height: 7, color: c }));
-  g1.text("lépe", swX + 3 * 11 + 4, lgY + 6, 7, font, MUTED);
-  g1.text("celkové hodnocení okolí", lgX, lgY - 3, 6.5, font, FAINT);
-  g1.text("OKOLÍ ADRESY", bx + 10, bTop - 14, 8, bold, rgb(1, 1, 1));
+  g1.text(copy.map.better, swX + 3 * 11 + 4, lgY + 6, 7, font, MUTED);
+  g1.text(copy.map.overallRating, lgX, lgY - 3, 6.5, font, FAINT);
+  g1.text(copy.map.addressArea, bx + 10, bTop - 14, 8, bold, rgb(1, 1, 1));
 
   y = bTop - bh - 24;
 
   // ── rent headline (official MF ČR cenová mapa), centered under the map ──────
   if (typeof rent === "number" && rent > 0) {
-    g1.textC(`Nájemné v okolí:  ≈ ${rent} Kč/m²/měs`, W / 2, 469, 11, bold, TEXT);
+    g1.textC(copy.rent.headline(rent), W / 2, 469, 11, bold, TEXT);
     if (typeof rentCity === "number" && rentCity > 0) {
       const diff = Math.round(((rent - rentCity) / rentCity) * 100);
-      const word = diff > 0 ? "dráž" : diff < 0 ? "levněji" : "stejně jako";
-      const txt = diff === 0
-        ? `stejně jako medián${cityName ? ` · ${cityName}` : ""}`
-        : `o ${Math.abs(diff)} % ${word} než medián${cityName ? ` · ${cityName}` : ""}`;
-      g1.textC(txt, W / 2, 458, 8, font, diff > 0 ? BAD : GOOD);
+      g1.textC(copy.rent.comparison(diff, cityName), W / 2, 458, 8, font, diff > 0 ? BAD : GOOD);
     }
   }
 
@@ -213,13 +200,12 @@ export async function POST(req: NextRequest) {
   g1.arc(gx, gy, gr, 220, -40, 8, LINE);
   g1.arc(gx, gy, gr, 220, 220 - 260 * overall, 8, scoreColor(overall));
   g1.textC(String(Math.round(overall * 100)), gx, gy - 5, 30, bold, TEXT);
-  g1.textC("/ 100", gx, gy - 21, 8, font, MUTED);
-  g1.text(verdict(overall), M, gy - gr - 24, 13, bold, TEXT);
-  g1.text("Celkové skóre okolí" + (cityName ? ` · ${cityName}` : ""),
-    M, gy - gr - 40, 9, font, MUTED);
+  g1.textC(copy.scoreOutOf, gx, gy - 21, 8, font, MUTED);
+  g1.text(copy.verdict(overall), M, gy - gr - 24, 13, bold, TEXT);
+  g1.text(copy.overallScore(cityName), M, gy - gr - 40, 9, font, MUTED);
 
-  // ── radar (theme profile) — right of gauge ─────────────────────────────────
-  const themes = GROUPS.map((grp) => {
+  // ── radar (theme profile) - right of gauge ─────────────────────────────────
+  const themes = copy.groups.map((grp) => {
     const ms = grp.ids.filter((id) => id in scores);
     const v = ms.length ? ms.reduce((a, id) => a + (Number(scores[id]) || 0), 0) / ms.length : 0;
     return { title: grp.title, v };
@@ -260,80 +246,69 @@ export async function POST(req: NextRequest) {
     g1.text(title, cardX, yTop, 9, bold, col);
     let yy = yTop - 16;
     for (const it of items) {
-      g1.text(LAYER_LABELS[it.k], cardX + 10, yy, 9, font, TEXT);
+      g1.text(copy.layers[it.k as PdfLayerId], cardX + 10, yy, 9, font, TEXT);
       g1.textR(`${Math.round(it.v * 100)}`, cardRight, yy, 9, font, col);
       yy -= 14;
     }
     return yy;
   };
   const listTop = gy - gr - 64;
-  const after = drawList("SILNÉ STRÁNKY", ranked.slice(0, 3), GOOD, listTop);
-  drawList("SLABÉ STRÁNKY", ranked.slice(-3).reverse(), BAD, after - 14);
+  const after = drawList(copy.strengths, ranked.slice(0, 3), GOOD, listTop);
+  drawList(copy.weaknesses, ranked.slice(-3).reverse(), BAD, after - 14);
 
   // ── pros & cons spread (full-width band, bottom of page) ───────────────────
-  const NEAR_LABELS: Record<string, string> = {
-    transit: "MHD zastávka", supermarket: "Supermarket", pharmacy: "Lékárna",
-    health: "Lékař / nemocnice", school: "Základní škola", park: "Park",
-  };
-  const FLAG_DEF: Record<string, [string, string]> = {
-    road: ["Rušná silnice", "doprava · hluk"],
-    railway: ["Železnice", "hluk · vibrace"],
-    gambling: ["Herna / sázení", "v okolí"],
-    nightclub: ["Noční klub", "noční hluk"],
-    industrial: ["Průmyslová zóna", "průmysl · doprava"],
-  };
-  const pros = ["transit", "supermarket", "pharmacy", "health", "school", "park"]
+  const pros = (["transit", "supermarket", "pharmacy", "health", "school", "park"] as PdfNearbyId[])
     .filter((c) => nearby && nearby[c]).slice(0, 5);
   const cons = Object.entries(flags || {})
-    .filter(([k]) => k in FLAG_DEF)
-    .map(([k, v]) => ({ k, dist: v.dist }))
+    .filter(([k]) => k in copy.flags)
+    .map(([k, v]) => ({ k: k as PdfFlagId, dist: v.dist }))
     .sort((a, b) => a.dist - b.dist).slice(0, 5);
 
   if (pros.length || cons.length || flags) {
     const colW = (W - 2 * M) / 2;
     const nbTop = 166, rowStep = 23;
     p1.drawLine({ start: { x: M, y: nbTop + 12 }, end: { x: W - M, y: nbTop + 12 }, thickness: 0.5, color: LINE });
-    g1.text("CO TU JE", M, nbTop, 8, bold, GOOD);
-    g1.text("NA CO POZOR", M + colW, nbTop, 8, bold, BAD);
+    g1.text(copy.prosHeading, M, nbTop, 8, bold, GOOD);
+    g1.text(copy.risksHeading, M + colW, nbTop, 8, bold, BAD);
 
     pros.forEach((c, i) => {
       const p = nearby![c];
       const ry = nbTop - 22 - i * rowStep;
       g1.text(p.name.length > 26 ? p.name.slice(0, 25) + "…" : p.name, M, ry, 9.5, font, TEXT);
-      g1.text(NEAR_LABELS[c], M, ry - 11, 7, font, FAINT);
-      g1.textR(`${p.dist} m`, M + colW - 16, ry, 9, bold, TEXT);
+      g1.text(copy.nearbyLabels[c], M, ry - 11, 7, font, FAINT);
+      g1.textR(copy.distance(p.dist), M + colW - 16, ry, 9, bold, TEXT);
     });
 
     const cx = M + colW;
     if (cons.length) {
       cons.forEach((f, i) => {
-        const [label, sub] = FLAG_DEF[f.k];
+        const [label, sub] = copy.flags[f.k];
         const ry = nbTop - 22 - i * rowStep;
         const col = f.dist < 100 ? BAD : ACCENT;
         g1.text(label, cx, ry, 9.5, font, col);
         g1.text(sub, cx, ry - 11, 7, font, FAINT);
-        g1.textR(`${f.dist} m`, cx + colW - 16, ry, 9, bold, col);
+        g1.textR(copy.distance(f.dist), cx + colW - 16, ry, 9, bold, col);
       });
     } else if (flags) {
-      g1.text("Žádná zjevná rizika v okolí", cx, nbTop - 22, 9.5, font, GOOD);
-      g1.text("bez rušné silnice, železnice, heren…", cx, nbTop - 33, 7, font, FAINT);
+      g1.text(copy.noRisks, cx, nbTop - 22, 9.5, font, GOOD);
+      g1.text(copy.noRisksDetail, cx, nbTop - 33, 7, font, FAINT);
     }
   }
 
-  g1.textC("kamvcesku.cz  ·  hodnocení na základě otevřených dat", W / 2, 30, 7.5, font, FAINT);
+  g1.textC(copy.footer, W / 2, 30, 7.5, font, FAINT);
 
-  // ════════════════════════════ PAGE 2 — detail ══════════════════════════════
+  // ════════════════════════════ PAGE 2 - detail ══════════════════════════════
   const p2 = doc.addPage([W, H]);
   p2.drawRectangle({ x: 0, y: 0, width: W, height: H, color: BG });
   const g2 = mk(p2);
-  g2.text("DETAILNÍ ROZBOR", M, H - M, 9, bold, ACCENT);
-  g2.text("Srovnání s průměrem města", M, H - M - 18, 16, bold, TEXT);
+  g2.text(copy.detailHeading, M, H - M, 9, bold, ACCENT);
+  g2.text(copy.cityComparisonTitle, M, H - M - 18, 16, bold, TEXT);
   if (cityName) g2.textR(cityName, W - M, H - M - 16, 11, font, MUTED);
 
   let yy = H - M - 50;
   const barX = M + 132, barW = 250, valX = barX + barW + 12;
 
-  for (const grp of GROUPS) {
+  for (const grp of copy.groups) {
     const members = grp.ids.filter((id) => id in scores);
     if (!members.length) continue;
     g2.text(grp.title.toUpperCase(), M, yy, 9, bold, ACCENT);
@@ -341,7 +316,7 @@ export async function POST(req: NextRequest) {
     for (const id of members) {
       const v = Number(scores[id]) || 0;
       const n = Number(scores[`n_${id}`]) || 0;
-      g2.text(LAYER_LABELS[id], M, yy, 9.5, font, TEXT);
+      g2.text(copy.layers[id], M, yy, 9.5, font, TEXT);
       // bar
       p2.drawRectangle({ x: barX, y: yy - 1, width: barW, height: 7, color: CARD });
       p2.drawRectangle({ x: barX, y: yy - 1, width: barW * v, height: 7, color: scoreColor(v) });
@@ -353,7 +328,7 @@ export async function POST(req: NextRequest) {
         const col = delta > 1 ? GOOD : delta < -1 ? BAD : MUTED;
         g2.textR(`${delta > 0 ? "+" : ""}${delta}`, W - M, yy, 8, bold, col);
       }
-      g2.text(metricText(id, n), valX, yy, 8, font, MUTED);
+      g2.text(copy.metric(id, n), valX, yy, 8, font, MUTED);
       yy -= 17;
     }
     yy -= 8;
@@ -362,76 +337,87 @@ export async function POST(req: NextRequest) {
   // legend
   yy -= 4;
   p2.drawRectangle({ x: M, y: yy - 2, width: 18, height: 7, color: scoreColor(0.7) });
-  g2.text("vaše adresa", M + 24, yy, 8, font, MUTED);
+  g2.text(copy.addressLegend, M + 24, yy, 8, font, MUTED);
   p2.drawRectangle({ x: M + 110, y: yy - 4, width: 1.6, height: 11, color: TEXT });
-  g2.text("průměr města", M + 120, yy, 8, font, MUTED);
+  g2.text(copy.cityAverageLegend, M + 120, yy, 8, font, MUTED);
 
-  // environment & risks — day/night noise split + flood hazard
+  // environment & risks - day/night noise split + flood hazard
   const dNoise = Number(scores["n_quiet"]) || 0;
   const nNoise = Number(scores["noise_night"]) || 0;
   if (dNoise || nNoise || typeof flood === "number") {
     yy -= 28;
-    g2.text("PROSTŘEDÍ A RIZIKA", M, yy, 9, bold, ACCENT);
+    g2.text(copy.environment.heading, M, yy, 9, bold, ACCENT);
     yy -= 17;
     if (dNoise || nNoise) {
-      g2.text("Hluk (den / noc)", M, yy, 9, font, MUTED);
-      g2.text(`${dNoise || "—"} / ${nNoise || "—"} dB`, M + 150, yy, 10, bold, TEXT);
+      g2.text(copy.environment.noise, M, yy, 9, font, MUTED);
+      g2.text(copy.environment.noiseLevels(dNoise || "-", nNoise || "-"), M + 150, yy, 10, bold, TEXT);
       yy -= 15;
     }
     if (typeof flood === "number") {
-      const FLOOD: [string, RGB][] = [
-        ["mimo záplavové území", GOOD],
-        ["nízké", GOOD],
-        ["střední", ACCENT],
-        ["vysoké", BAD],
-        ["velmi vysoké", BAD],
-      ];
+      const FLOOD: [string, RGB][] = copy.environment.floodLevel.map((label, index) =>
+        [label, index < 2 ? GOOD : index === 2 ? ACCENT : BAD]
+      );
       const [label, col] = FLOOD[Math.max(0, Math.min(4, flood))];
-      g2.text("Povodňové riziko (řeky)", M, yy, 9, font, MUTED);
-      g2.text(label + (flood > 0 ? `  (kat. ${flood}/4)` : ""), M + 150, yy, 10, bold, col);
+      g2.text(copy.environment.floodRisk, M, yy, 9, font, MUTED);
+      g2.text(label + (flood > 0 ? `  ${copy.environment.floodCategory(flood)}` : ""), M + 150, yy, 10, bold, col);
       yy -= 15;
     }
   }
   // honest scope note: the national hazard map is fluvial (river) flooding only
   if (typeof flood === "number") {
-    g2.text("Týká se rozlivů řek; přívalové (bleskové) povodně z přívalových srážek nezahrnuje.", M, yy, 7, font, FAINT);
+    g2.text(copy.environment.floodScope, M, yy, 7, font, FAINT);
     yy -= 13;
   }
 
   // sources
   yy -= 30;
-  g2.text("ZDROJE DAT", M, yy, 9, bold, ACCENT);
+  g2.text(copy.sources.heading, M, yy, 9, bold, ACCENT);
   yy -= 15;
-  const sources = [...SOURCES];
+  const sources = [...copy.sources.base];
   if (typeof rent === "number" && rent > 0)
-    sources.splice(6, 0, `Nájemné: MF ČR – cenová mapa nájemního bydlení${rentQuarter ? ` (${rentQuarter})` : ""}`);
+    sources.splice(6, 0, copy.sources.rent(rentQuarter));
   if (typeof flood === "number")
-    sources.push("Povodňové riziko: CENIA – povodňové ohrožení 2019 (dir. 2007/60/ES)");
+    sources.push(copy.sources.flood);
   for (const s of sources) { g2.text("•  " + s, M, yy, 8, font, MUTED); yy -= 12; }
   yy -= 8;
-  g2.text("Skóre 0–100 = relativní hodnocení v rámci města. Počty objektů do 800 m od adresy", M, yy, 7.5, font, FAINT);
-  g2.text("(kvalita SŠ do 3 km, ovzduší roční průměr PM2.5).", M, yy - 10, 7.5, font, FAINT);
+  g2.text(copy.methodology[0], M, yy, 7.5, font, FAINT);
+  g2.text(copy.methodology[1], M, yy - 10, 7.5, font, FAINT);
+  if (unavailableSources?.length) {
+    let warningY = yy - 32;
+    let line = "";
+    for (const word of copy.partialWarning.split(" ")) {
+      const candidate = line ? `${line} ${word}` : word;
+      if (font.widthOfTextAtSize(candidate, 7.5) > W - 2 * M && line) {
+        g2.text(line, M, warningY, 7.5, font, BAD);
+        warningY -= 11;
+        line = word;
+      } else {
+        line = candidate;
+      }
+    }
+    if (line) g2.text(line, M, warningY, 7.5, font, BAD);
+  }
 
-  // ════════════════════════ PAGE 3 — accessibility (10-min reach) ════════════
+  // ════════════════════════ PAGE 3 - accessibility (10-min reach) ════════════
   if (isoWalk?.img || isoDrive?.img) {
     const p3 = doc.addPage([W, H]);
     p3.drawRectangle({ x: 0, y: 0, width: W, height: H, color: BG });
     const g3 = mk(p3);
-    g3.text("DOSTUPNOST", M, H - M, 9, bold, ACCENT);
-    g3.text("Kam se dostanete za 10 minut", M, H - M - 20, 16, bold, TEXT);
+    g3.text(copy.accessibility.heading, M, H - M, 9, bold, ACCENT);
+    g3.text(copy.accessibility.title, M, H - M - 20, 16, bold, TEXT);
     if (cityName) g3.textR(cityName, W - M, H - M - 18, 11, font, MUTED);
-    g3.text("Dosah od adresy po reálné silniční síti (zdroj: OpenStreetMap / Valhalla).", M, H - M - 38, 9, font, MUTED);
+    g3.text(copy.accessibility.scope, M, H - M - 38, 9, font, MUTED);
 
     const tileW = W - 2 * M, tileH = 300;
     const entries = [
-      { data: isoWalk, label: "10 minut pěšky", labelY: 744 },
-      { data: isoDrive, label: "10 minut autem", labelY: 420 },
+      { data: isoWalk, label: copy.accessibility.walk, labelY: 744 },
+      { data: isoDrive, label: copy.accessibility.drive, labelY: 390 },
     ];
     for (const e of entries) {
       const bxT = M, byT = e.labelY - 16 - tileH;
       p3.drawRectangle({ x: bxT, y: byT, width: tileW, height: tileH, color: CARD, borderColor: LINE, borderWidth: 1 });
       g3.text(e.label, M, e.labelY, 11, bold, TEXT);
-      if (e.data?.area != null) g3.textR(`≈ ${e.data.area} km² dosažitelných`, W - M, e.labelY, 9, font, MUTED);
+      if (e.data?.area != null) g3.textR(copy.accessibility.reachableArea(e.data.area), W - M, e.labelY, 9, font, MUTED);
       if (e.data?.img && e.data.img.startsWith("data:image/png")) {
         try {
           const png = await doc.embedPng(Buffer.from(e.data.img.split(",")[1], "base64"));
@@ -442,22 +428,36 @@ export async function POST(req: NextRequest) {
           p3.drawImage(png, { x: ix, y: iy, width: iw, height: ih });
           p3.pushOperators(popGraphicsState());
           const mcx = bxT + tileW / 2, mcy = byT + tileH / 2;
-          p3.drawCircle({ x: mcx, y: mcy, size: 10, color: rgb(1, 1, 1), opacity: 0.18 });
-          p3.drawCircle({ x: mcx, y: mcy, size: 5, color: ACCENT, borderColor: rgb(1, 1, 1), borderWidth: 1.8 });
+          p3.drawCircle({ x: mcx, y: mcy, size: 10, color: rgb(0, 0, 0), opacity: 0.15 });
+          p3.drawCircle({ x: mcx, y: mcy, size: 5, color: ACCENT, borderColor: rgb(0.2, 0.2, 0.2), borderWidth: 1.8 });
         } catch { /* skip */ }
       } else {
-        g3.textC("Nedostupné", bxT + tileW / 2, byT + tileH / 2, 10, font, FAINT);
+        g3.textC(copy.unavailable, bxT + tileW / 2, byT + tileH / 2, 10, font, FAINT);
       }
     }
-    g3.text("Izochrona = oblast dosažitelná z adresy ve stanoveném čase. Bod = vaše adresa.", M, 50, 7.5, font, FAINT);
-    g3.textC("kamvcesku.cz  ·  hodnocení na základě otevřených dat", W / 2, 30, 7.5, font, FAINT);
+    g3.text(copy.accessibility.isochroneNote, M, 50, 7.5, font, FAINT);
+    g3.textC(copy.footer, W / 2, 30, 7.5, font, FAINT);
   }
+
+  const safeName = address
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .toLowerCase();
+  const filename = safeName ? `${safeName}-report.pdf` : "kam-v-cesku-report.pdf";
 
   const bytes = await doc.save();
   return new NextResponse(Buffer.from(bytes), {
     headers: {
       "content-type": "application/pdf",
-      "content-disposition": `attachment; filename="report.pdf"`,
+      "content-disposition": `attachment; filename="${filename}"`,
     },
   });
+    });
+  } catch (error) {
+    if (error instanceof ConcurrencyLimitError)
+      return NextResponse.json({ error: "server busy" }, { status: 503, headers: { "Retry-After": "2" } });
+    throw error;
+  }
 }

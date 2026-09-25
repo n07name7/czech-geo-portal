@@ -1,13 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { BoundedTtlCache, fetchWithTimeout, isCzechCoordinate, UpstreamTimeoutError } from "../_lib/hardening";
+import { BodyTooLargeError, clientIdentifier, ConcurrencyLimitError, liveApiLimiter, readLimitedJson, readLimitedResponseJson, runProtectedUpstream } from "../_lib/request-protection";
 
 export const runtime = "nodejs";
 
 // Named "what's around this address" lookup. Unlike the scored hex layers
 // (which are anonymous counts), renters want concrete names + walking distance:
-// "Lidl · 550 m · 7 min". We query OSM Overpass live for one point — a single
+// "Lidl · 550 m · 7 min". We query OSM Overpass live for one point - a single
 // small query per report, cached by rounded coordinates.
 
-const OVERPASS = "https://overpass-api.de/api/interpreter";
+const OVERPASS = process.env.OVERPASS_URL || "https://overpass-api.de/api/interpreter";
 
 type Cat = "supermarket" | "pharmacy" | "health" | "school" | "transit" | "park";
 
@@ -20,9 +22,8 @@ type OverpassEl = {
   tags?: Record<string, string>;
 };
 
-// in-memory cache (per warm lambda) keyed by rounded coords, 1h TTL
-const cache = new Map<string, { at: number; data: Record<string, Poi> }>();
 const TTL = 60 * 60 * 1000;
+const cache = new BoundedTtlCache<Record<string, Poi>>(256, TTL);
 
 function haversine(aLat: number, aLon: number, bLat: number, bLon: number): number {
   const R = 6371000;
@@ -64,47 +65,49 @@ async function queryOverpass(lat: number, lon: number): Promise<OverpassEl[]> {
 );
 out center tags;`;
 
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const res = await fetch(OVERPASS, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain", "User-Agent": "Czech-Geo-Portal/1.0" },
-      body: q,
-    });
-    if ((res.status === 429 || res.status >= 500) && attempt < 2) {
-      await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
-      continue;
-    }
-    if (!res.ok) throw new Error(`overpass ${res.status}`);
-    const json = (await res.json()) as { elements?: OverpassEl[] };
-    return json.elements ?? [];
-  }
-  return [];
+  // Overpass permits 25 seconds of query execution. Allow transport overhead,
+  // but make only one attempt rather than multiplying the route's time budget.
+  const res = await fetchWithTimeout(OVERPASS, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain", "User-Agent": "Czech-Geo-Portal/1.0" },
+    body: q,
+  }, 30_000);
+  if (!res.ok) throw new Error(`overpass ${res.status}`);
+  const json = (await readLimitedResponseJson(res)) as { elements?: OverpassEl[]; remark?: string };
+  if (!Array.isArray(json.elements) || json.remark) throw new Error("invalid overpass payload");
+  return json.elements;
 }
 
 export async function POST(req: NextRequest) {
+  if (!liveApiLimiter.allow(clientIdentifier(req.headers)))
+    return NextResponse.json({ error: "rate limit" }, { status: 429, headers: { "Retry-After": "60" } });
   let lat: number, lon: number;
   try {
-    const body = await req.json();
-    lat = Number(body.lat);
-    lon = Number(body.lon);
-  } catch {
+    const body = await readLimitedJson(req, 1_024) as { lat?: unknown; lon?: unknown };
+    if (!isCzechCoordinate(body.lat, body.lon)) {
+      return NextResponse.json({ error: "bad coords" }, { status: 400 });
+    }
+    lat = body.lat;
+    lon = body.lon as number;
+  } catch (error) {
+    if (error instanceof BodyTooLargeError)
+      return NextResponse.json({ error: "body too large" }, { status: 413 });
     return NextResponse.json({ error: "bad body" }, { status: 400 });
-  }
-  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
-    return NextResponse.json({ error: "bad coords" }, { status: 400 });
   }
 
   const key = `${lat.toFixed(4)},${lon.toFixed(4)}`;
   const hit = cache.get(key);
-  if (hit && Date.now() - hit.at < TTL) {
-    return NextResponse.json(hit.data);
-  }
+  if (hit) return NextResponse.json(hit);
 
   let elements: OverpassEl[];
   try {
-    elements = await queryOverpass(lat, lon);
-  } catch {
-    return NextResponse.json({}, { status: 200 }); // soft-fail: report still works without it
+    elements = await runProtectedUpstream("nearby", key, () => queryOverpass(lat, lon));
+  } catch (error) {
+    if (error instanceof ConcurrencyLimitError)
+      return NextResponse.json({ error: "server busy" }, { status: 503, headers: { "Retry-After": "2" } });
+    if (error instanceof UpstreamTimeoutError)
+      return NextResponse.json({ error: "upstream timeout" }, { status: 504 });
+    return NextResponse.json({ error: "upstream unavailable" }, { status: 502 });
   }
 
   const nearest: Partial<Record<Cat, Poi>> = {};
@@ -131,6 +134,6 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  cache.set(key, { at: Date.now(), data: nearest as Record<string, Poi> });
+  cache.set(key, nearest as Record<string, Poi>);
   return NextResponse.json(nearest);
 }

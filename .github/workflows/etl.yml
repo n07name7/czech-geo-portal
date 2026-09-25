@@ -35,7 +35,11 @@ jobs:
 
       - name: Install Python deps
         working-directory: etl
-        run: pip install -r requirements.txt
+        run: pip install -r requirements.txt && pip install pytest
+
+      - name: Run Tests
+        working-directory: etl
+        run: pytest
 
       - name: Run ETL
         working-directory: etl

@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import maplibregl from "maplibre-gl";
-import { Protocol } from "pmtiles";
+import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 import type { LayerId, BasemapId } from "@/types";
 import { LAYERS, COMBINED_URL } from "@/lib/layers";
-import { CITIES, type CityConfig } from "@/lib/cities";
+import { type CityConfig } from "@/lib/cities";
+import { ensurePmtilesProtocol } from "@/lib/pmtiles-protocol";
+import { configureMaplibreWorker } from "@/lib/maplibre-worker";
 import {
   PRAGUE_CENTER,
   PRAGUE_INITIAL_ZOOM,
@@ -27,7 +28,7 @@ interface Props {
   basemapId: BasemapId;
   matchMode: boolean;
   weights: Record<LayerId, number>;
-  /** What the popup measures — active layer name, or "match" label in match mode */
+  /** What the popup measures - active layer name, or "match" label in match mode */
   measureLabel: string;
   /** Word under the score, e.g. "rating" */
   ratingLabel: string;
@@ -118,19 +119,7 @@ function attachPmtilesLayers(
         },
       });
 
-      // Highlight layer — filtered to hovered hex via setFilter; starts with no-match filter
-      map.addLayer({
-        id: `${layer.id}-highlight`,
-        type: "line",
-        source: layer.id,
-        "source-layer": "cells",
-        layout: { visibility: layer.id === activeLayer ? "visible" : "none" },
-        filter: ["==", ["get", "cell"], ""],
-        paint: {
-          "line-color": "#ffffff",
-          "line-width": 2,
-        },
-      });
+      // Highlight layer removed here, handled by global hover-source instead
     }
   }
 }
@@ -164,15 +153,7 @@ function attachCombinedLayer(
         "fill-antialias": false,
       },
     });
-    map.addLayer({
-      id: "combined-highlight",
-      type: "line",
-      source: "combined",
-      "source-layer": "cells",
-      layout: { visibility: visible ? "visible" : "none" },
-      filter: ["==", ["get", "cell"], ""],
-      paint: { "line-color": "#ffffff", "line-width": 2 },
-    });
+    // Highlight layer removed here, handled by global hover-source instead
   }
 }
 
@@ -244,6 +225,20 @@ function refreshBoundary(map: maplibregl.Map, geojson: BoundaryGeoJson) {
 
 // ── Layer orchestration ───────────────────────────────────────────────────────
 
+function attachHoverLayer(map: maplibregl.Map) {
+  if (!map.getSource("hover-source")) {
+    map.addSource("hover-source", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+  }
+  if (!map.getLayer("hover-highlight")) {
+    map.addLayer({
+      id: "hover-highlight",
+      type: "line",
+      source: "hover-source",
+      paint: { "line-color": "#ffffff", "line-width": 2 },
+    });
+  }
+}
+
 function attachAllLayers(
   map: maplibregl.Map,
   activeLayer: LayerId,
@@ -256,10 +251,11 @@ function attachAllLayers(
   attachPmtilesLayers(map, activeLayer, gradient, opacity);
   attachCombinedLayer(map, basemapId, weights, matchMode);
   if (boundary) attachBoundaryLayers(map, boundary);
+  attachHoverLayer(map);
 }
 
 /** Apply the current overlay visibility (single active layer vs match, and the
- *  hide-hexagons toggle). Called after every (re)attach — a basemap switch
+ *  hide-hexagons toggle). Called after every (re)attach - a basemap switch
  *  reloads the style and re-adds layers visible by default. */
 function applyOverlayVisibility(
   map: maplibregl.Map,
@@ -270,16 +266,18 @@ function applyOverlayVisibility(
   for (const layer of LAYERS) {
     const vis = hexVisible && !matchMode && layer.id === activeLayer ? "visible" : "none";
     if (map.getLayer(`${layer.id}-fill`)) map.setLayoutProperty(`${layer.id}-fill`, "visibility", vis);
-    if (map.getLayer(`${layer.id}-highlight`)) map.setLayoutProperty(`${layer.id}-highlight`, "visibility", vis);
   }
   const matchVis = hexVisible && matchMode ? "visible" : "none";
   if (map.getLayer("combined-fill")) map.setLayoutProperty("combined-fill", "visibility", matchVis);
-  if (map.getLayer("combined-highlight")) map.setLayoutProperty("combined-highlight", "visibility", matchVis);
+  
+  const hoverVis = hexVisible ? "visible" : "none";
+  if (map.getLayer("hover-highlight")) map.setLayoutProperty("hover-highlight", "visibility", hoverVis);
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function MapView({ activeLayer, basemap, activeCity, basemapId, matchMode, weights, measureLabel, ratingLabel, hexVisible }: Props) {
+  configureMaplibreWorker(maplibregl.setWorkerUrl);
   const containerRef   = useRef<HTMLDivElement>(null);
   const mapRef         = useRef<maplibregl.Map | null>(null);
   const popupRef       = useRef<maplibregl.Popup | null>(null);
@@ -304,32 +302,22 @@ export default function MapView({ activeLayer, basemap, activeCity, basemapId, m
   useEffect(() => { ratingLabelRef.current  = ratingLabel;  }, [ratingLabel]);
   useEffect(() => { hexVisibleRef.current   = hexVisible;   }, [hexVisible]);
 
-  // PMTiles protocol
+  // PMTiles protocol - registered once per app lifetime; the registry is
+  // global, so unmounting one map must never remove it for another.
   useEffect(() => {
-    const protocol = new Protocol();
-    maplibregl.addProtocol("pmtiles", protocol.tile);
-    return () => maplibregl.removeProtocol("pmtiles");
+    ensurePmtilesProtocol(maplibregl.addProtocol);
   }, []);
 
-  // Preload all city boundaries → instant switching
-  useEffect(() => {
-    CITIES.forEach((city) => {
-      if (boundaryCache.current[city.id]) return;
-      fetch(city.boundaryFile)
-        .then((r) => r.ok ? r.json() : Promise.reject(r.status))
-        .then((data: BoundaryGeoJson) => { boundaryCache.current[city.id] = data; })
-        .catch(() => {});
-    });
-  }, []);
+  // Removed eager boundary preloading. Boundaries are now only fetched when the active city changes.
 
-  // City boundary — use cache when available, otherwise fetch
+  // City boundary - use cache when available, otherwise fetch
   useEffect(() => {
     const apply = (data: BoundaryGeoJson) => {
       boundaryRef.current = data;
       const map = mapRef.current;
       if (!map) return;
       // setData on existing sources is safe even while tiles are still loading
-      // (isStyleLoaded() is false then — e.g. satellite raster streaming in);
+      // (isStyleLoaded() is false then - e.g. satellite raster streaming in);
       // only addSource throws before the style finishes. Retry once on idle.
       try {
         refreshBoundary(map, data);
@@ -390,7 +378,7 @@ export default function MapView({ activeLayer, basemap, activeCity, basemapId, m
       attachAllLayers(map, activeLayerRef.current, boundaryRef.current, basemapIdRef.current, matchModeRef.current, weightsRef.current);
     });
 
-    // Explicit colours — CSS variables may not resolve inside MapLibre popup container.
+    // Explicit colours - CSS variables may not resolve inside MapLibre popup container.
     // Title = what is being measured (active layer name, or "match" in match mode);
     // rating word makes "73 %" read as a quality rating, not generic "accessibility".
     const escapeHtml = (s: string) =>
@@ -410,12 +398,12 @@ export default function MapView({ activeLayer, basemap, activeCity, basemapId, m
 
     const clearHover = () => {
       if (hoveredHexRef.current) {
-        const hlId = `${hoveredHexRef.current.source}-highlight`;
-        if (map.getLayer(hlId)) map.setFilter(hlId, ["==", ["get", "cell"], ""]);
+        const src = map.getSource("hover-source") as maplibregl.GeoJSONSource | undefined;
+        if (src) src.setData({ type: "FeatureCollection", features: [] });
         hoveredHexRef.current = null;
       }
       popup.remove();
-      map.getCanvas().style.cursor = "";
+      if (map.getCanvas()) map.getCanvas().style.cursor = "";
     };
 
     // Use querySourceFeatures + geographic distance instead of queryRenderedFeatures.
@@ -445,30 +433,25 @@ export default function MapView({ activeLayer, basemap, activeCity, basemapId, m
 
     const activeFillId = () => (matchModeRef.current ? "combined-fill" : `${activeLayerRef.current}-fill`);
 
-    // Highlight + popup for the hex under cursor. Shared by the fast hover path
-    // and the reliable tap path.
-    const applyHex = (sourceId: string, props: Record<string, unknown>, lngLat: maplibregl.LngLat): boolean => {
+    // Highlight + popup for the hex under cursor. Fast O(1) GeoJSON update.
+    const applyHex = (feature: GeoJSON.Feature | maplibregl.MapGeoJSONFeature, lngLat: maplibregl.LngLat): boolean => {
+      const props = feature.properties || {};
       const score = matchModeRef.current ? blendScore(props) : (Number(props.score) || 0);
       if (score <= 0) return false;
       const h3index = (props.cell as string) ?? "";
       if (!h3index) return false;
+      
       if (String(hoveredHexRef.current?.id) !== String(h3index)) {
-        if (hoveredHexRef.current) {
-          const prevHl = `${hoveredHexRef.current.source}-highlight`;
-          if (map.getLayer(prevHl)) map.setFilter(prevHl, ["==", ["get", "cell"], ""]);
-        }
-        hoveredHexRef.current = { id: String(h3index), source: sourceId };
-        const hlId = `${sourceId}-highlight`;
-        if (map.getLayer(hlId)) map.setFilter(hlId, ["==", ["get", "cell"], h3index]);
+        hoveredHexRef.current = { id: String(h3index), source: "hover" };
+        const src = map.getSource("hover-source") as maplibregl.GeoJSONSource | undefined;
+        // Cast to unknown first to bypass strict internal MapLibre types
+        if (src) src.setData({ type: "FeatureCollection", features: [feature as unknown as GeoJSON.Feature] });
       }
       map.getCanvas().style.cursor = "pointer";
       popup.setLngLat(lngLat).setHTML(popupHtml(score)).addTo(map);
       return true;
     };
 
-    // Fast hover: query only what is rendered under the cursor (O(1)-ish),
-    // instead of scanning every source feature — avoids the lag/"tail" when
-    // moving fast over a zoomed-out map with thousands of cells.
     const showHover = (point: maplibregl.Point, lngLat: maplibregl.LngLat): boolean => {
       if (!hexVisibleRef.current) return false;
       const lid = activeFillId();
@@ -476,8 +459,7 @@ export default function MapView({ activeLayer, basemap, activeCity, basemapId, m
       const feats = map.queryRenderedFeatures(point, { layers: [lid] });
       const best = feats[0];
       if (!best) return false;
-      const sourceId = matchModeRef.current ? "combined" : activeLayerRef.current;
-      return applyHex(sourceId, best.properties ?? {}, lngLat);
+      return applyHex(best, lngLat);
     };
 
     const tryShowHex = (lngLat: maplibregl.LngLat): boolean => {
@@ -496,27 +478,7 @@ export default function MapView({ activeLayer, basemap, activeCity, basemapId, m
         if (d < bestDist) { bestDist = d; best = f; }
       }
       if (!best || bestDist > hitRadiusDeg(map.getZoom())) return false;
-
-      const score = matchModeRef.current
-        ? blendScore(best.properties ?? {})
-        : (best.properties?.score ?? 0);
-      if (score <= 0) return false; // no popup for cells with zero score
-
-      const h3index = best.properties?.cell ?? String(best.id);
-      if (!h3index) return false;
-
-      if (String(hoveredHexRef.current?.id) !== String(h3index)) {
-        if (hoveredHexRef.current) {
-          const prevHl = `${hoveredHexRef.current.source}-highlight`;
-          if (map.getLayer(prevHl)) map.setFilter(prevHl, ["==", ["get", "cell"], ""]);
-        }
-        hoveredHexRef.current = { id: String(h3index), source: sourceId };
-        const hlId = `${sourceId}-highlight`;
-        if (map.getLayer(hlId)) map.setFilter(hlId, ["==", ["get", "cell"], h3index]);
-      }
-      map.getCanvas().style.cursor = "pointer";
-      popup.setLngLat(lngLat).setHTML(popupHtml(score)).addTo(map);
-      return true;
+      return applyHex(best, lngLat);
     };
 
     // Track last touch time to suppress synthesized mouse events on Android
@@ -524,9 +486,11 @@ export default function MapView({ activeLayer, basemap, activeCity, basemapId, m
     // Track multi-touch to avoid showing popup after pinch-zoom
     let maxTouchCount = 0;
 
-    map.getCanvas().addEventListener("touchstart", (e) => {
+    const canvas = map.getCanvas();
+    const onTouchStart = (e: TouchEvent) => {
       maxTouchCount = Math.max(maxTouchCount, e.touches.length);
-    }, { passive: true });
+    };
+    canvas.addEventListener("touchstart", onTouchStart, { passive: true });
 
     // Mobile: show popup only on clean single-finger tap, not after pinch
     map.on("touchend", (e) => {
@@ -539,25 +503,28 @@ export default function MapView({ activeLayer, basemap, activeCity, basemapId, m
       if (!tryShowHex(e.lngLat)) clearHover();
     });
 
-    // Desktop hover — debounce rapid mousemoves to prevent lag/stutter 
-    // from too many setFilter calls (which force style recalculation).
-    let hoverTimeout: ReturnType<typeof setTimeout> | null = null;
+    // Desktop hover - throttle rapid mousemoves via requestAnimationFrame 
+    // to prevent lag/stutter but keep the popup sticking to the cursor instantly.
+    let isTicking = false;
     let pendingPoint: maplibregl.Point | null = null;
     let pendingLngLat: maplibregl.LngLat | null = null;
     map.on("mousemove", (e) => {
       if (Date.now() - lastTouchTime < 600) return;
       pendingPoint = e.point;
       pendingLngLat = e.lngLat;
-      if (hoverTimeout) clearTimeout(hoverTimeout);
-      hoverTimeout = setTimeout(() => {
-        if (pendingPoint && pendingLngLat && !showHover(pendingPoint, pendingLngLat)) clearHover();
-      }, 40);
+      if (!isTicking) {
+        requestAnimationFrame(() => {
+          if (pendingPoint && pendingLngLat && !showHover(pendingPoint, pendingLngLat)) clearHover();
+          isTicking = false;
+        });
+        isTicking = true;
+      }
     });
-    map.on("mouseleave", () => {
+    const onMouseLeave = () => {
       if (Date.now() - lastTouchTime < 600) return;
-      if (hoverTimeout) clearTimeout(hoverTimeout);
       clearHover();
-    });
+    };
+    canvas.addEventListener("mouseleave", onMouseLeave);
 
     // Desktop click fallback
     map.on("click", (e) => {
@@ -570,7 +537,12 @@ export default function MapView({ activeLayer, basemap, activeCity, basemapId, m
       if ((e as { originalEvent?: Event }).originalEvent) clearHover();
     });
 
-    return () => { map.remove(); mapRef.current = null; };
+    return () => {
+      canvas.removeEventListener("touchstart", onTouchStart);
+      canvas.removeEventListener("mouseleave", onMouseLeave);
+      map.remove();
+      mapRef.current = null;
+    };
   }, []);
 
   // Basemap switch
@@ -595,7 +567,7 @@ export default function MapView({ activeLayer, basemap, activeCity, basemapId, m
     if (!hexVisible && popupRef.current) popupRef.current.remove();
   }, [activeLayer, matchMode, hexVisible]);
 
-  // Recompute the weighted blend when sliders move — instant, no refetch
+  // Recompute the weighted blend when sliders move - instant, no refetch
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded() || !map.getLayer("combined-fill")) return;
@@ -606,5 +578,5 @@ export default function MapView({ activeLayer, basemap, activeCity, basemapId, m
     );
   }, [weights]);
 
-  return <div ref={containerRef} className="w-full h-full" />;
+  return <div ref={containerRef} className="w-full h-full touch-none" />;
 }

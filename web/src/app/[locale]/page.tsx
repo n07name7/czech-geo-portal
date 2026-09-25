@@ -126,7 +126,7 @@ export default async function LandingPage() {
             "radial-gradient(ellipse 70% 60% at 72% 42%, rgba(232,160,48,0.055) 0%, transparent 70%), #0b0d12",
         }}
       >
-        {/* Left — text */}
+        {/* Left - text */}
         <div
           className="flex-1 flex flex-col justify-center px-8 sm:px-14 lg:px-20 py-20 lg:py-0 z-10"
           style={{ animation: "fadeUp 0.7s ease both" }}
@@ -171,7 +171,7 @@ export default async function LandingPage() {
           </div>
         </div>
 
-        {/* Right — hex visualization */}
+        {/* Right - hex visualization */}
         <div
           className="flex-1 w-full lg:w-auto h-[340px] lg:h-[calc(100vh-48px)] relative"
           style={{ animation: "fadeUp 0.9s ease 0.15s both" }}
@@ -185,7 +185,7 @@ export default async function LandingPage() {
         <div className="max-w-5xl mx-auto">
           <div className="flex items-baseline gap-6 mb-14">
             <span className="text-[10px] tracking-[0.25em] uppercase text-[var(--accent)] font-body">
-              Data
+              <SectionLabel id="sectionData" />
             </span>
             <h2 className="font-display text-3xl text-[var(--text)]">
               <LayersTitle />
@@ -205,7 +205,7 @@ export default async function LandingPage() {
         <div className="max-w-5xl mx-auto">
           <div className="flex items-baseline gap-6 mb-16">
             <span className="text-[10px] tracking-[0.25em] uppercase text-[var(--accent)] font-body">
-              Postup
+              <SectionLabel id="sectionSteps" />
             </span>
             <h2 className="font-display text-3xl text-[var(--text)]">
               <HowTitle />
@@ -225,7 +225,7 @@ export default async function LandingPage() {
         <div className="max-w-5xl mx-auto">
           <div className="flex items-baseline gap-6 mb-6">
             <span className="text-[10px] tracking-[0.25em] uppercase text-[var(--accent)] font-body">
-              Report
+              <SectionLabel id="sectionReport" />
             </span>
             <h2 className="font-display text-3xl text-[var(--text)]">
               <ReportShowcaseTitle />
@@ -251,15 +251,6 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── Footer ───────────────────────────────────────────────────────── */}
-      <footer className="border-t border-[var(--border)] py-8 px-8 sm:px-14 lg:px-20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <span className="font-display text-sm text-[var(--text-faint)] tracking-wider uppercase">
-          Kam v Česku?
-        </span>
-        <span className="font-body text-xs text-[var(--text-faint)]">
-          Data: veřejné registry ČR · OpenStreetMap · <Link href={`/${locale}/methodology`} className="hover:text-[var(--accent)] transition-colors">Metodologie</Link>
-        </span>
-      </footer>
     </div>
   );
 }
@@ -268,17 +259,20 @@ export default async function LandingPage() {
 
 function HeroHeadline() {
   const t = useTranslations("landing");
-  const headline = t("headline"); // "Kde bydlet v Praze?"
-  const parts = headline.split(" v ");
-  return parts.length === 2 ? (
-    <>
-      {parts[0]}
-      <br />v{" "}
-      <span style={{ color: "var(--accent)" }}>{parts[1]}</span>
-    </>
-  ) : (
-    <>{headline}</>
-  );
+  const headline = t("headline");
+  const accent = t("headlineAccent");
+  const idx = headline.indexOf(accent);
+  if (idx > 0) {
+    const before = headline.slice(0, idx);
+    return (
+      <>
+        {before}
+        <br />
+        <span style={{ color: "var(--accent)" }}>{accent}</span>
+      </>
+    );
+  }
+  return <>{headline}</>;
 }
 
 function HeroSub() {
@@ -299,6 +293,11 @@ function StatLayers() {
 function StatSource() {
   const t = useTranslations("landing");
   return <>{t("statSource")}</>;
+}
+
+function SectionLabel({ id }: { id: "sectionData" | "sectionSteps" | "sectionReport" }) {
+  const t = useTranslations("landing");
+  return <>{t(id)}</>;
 }
 
 function CtaLabel() {

@@ -58,4 +58,18 @@ describe("report decision insights", () => {
     expect(summary.watchOuts).toEqual([]);
     expect(summary.verdict).toContain("enough data");
   });
+
+  it("writes strengths, risks and verdict in Russian", () => {
+    const summary = buildDecisionSummary({
+      scores,
+      profile: "family",
+      nearby: { school: { name: "Школа у парка", dist: 280, min: 4 } },
+      flags: { railway: { dist: 130 } },
+      locale: "ru",
+    });
+
+    expect(summary.strengths.join(" ")).toContain("Школа у парка");
+    expect(summary.watchOuts.join(" ")).toContain("Железная дорога");
+    expect(summary.verdict).toContain("семьи");
+  });
 });

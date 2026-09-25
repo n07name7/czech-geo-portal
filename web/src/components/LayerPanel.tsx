@@ -105,7 +105,7 @@ export default function LayerPanel({
                         {t(layer.labelKey)}
                       </span>
                       <span className="text-[10px] font-body text-[var(--text-faint)] tabular-nums">
-                        {weights[layer.id] === 0 ? "–" : `${weights[layer.id]}×`}
+                        {weights[layer.id] === 0 ? "-" : `${weights[layer.id]}×`}
                       </span>
                     </div>
                     <input
@@ -131,7 +131,7 @@ export default function LayerPanel({
         </div>
       </div>
 
-      {/* Toggle button — clearly labelled & tappable, esp. on mobile */}
+      {/* Toggle button - clearly labelled & tappable, esp. on mobile */}
       <button
         onClick={onToggle}
         className="relative z-20 mt-3 bg-[var(--surface)] border border-l-0 border-[var(--border)] rounded-r-md shadow-lg flex items-center gap-1.5 pl-2.5 pr-3 py-2.5 text-[var(--text-muted)] hover:text-[var(--accent)] hover:bg-[var(--card)] active:bg-[var(--card)] transition-colors touch-manipulation"

@@ -1,6 +1,7 @@
 "use client";
-import { useLocale } from "next-intl";
-import { useRouter, usePathname } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { switchLocaleInUrl } from "@/lib/locale-url";
 
 const LOCALES = [
   { code: "cs", label: "CS" },
@@ -10,13 +11,13 @@ const LOCALES = [
 
 export default function LanguageSwitcher() {
   const locale = useLocale();
+  const t = useTranslations("nav");
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const switchLocale = (code: string) => {
-    const segments = pathname.split("/");
-    segments[1] = code;
-    router.push(segments.join("/"));
+    router.push(switchLocaleInUrl(pathname, searchParams.toString(), code));
   };
 
   return (
@@ -26,7 +27,8 @@ export default function LanguageSwitcher() {
           {i > 0 && <span className="text-[var(--text-faint)] text-xs">·</span>}
           <button
             onClick={() => switchLocale(l.code)}
-            aria-label={`Změnit jazyk na ${l.code}`}
+            aria-label={t("languageTo", { language: l.label })}
+            aria-current={locale === l.code ? "true" : undefined}
             className={`text-xs tracking-widest font-medium transition-colors ${
               locale === l.code
                 ? "text-[var(--accent)]"

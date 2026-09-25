@@ -26,7 +26,7 @@ export interface CellInfo {
   layerScores: Partial<Record<LayerId, number>>;
 }
 
-export type BasemapId = "svetla" | "tmava" | "osm" | "satelit";
+export type BasemapId = "svetla" | "tmava" | "satelit";
 
 export interface BasemapConfig {
   id: BasemapId;

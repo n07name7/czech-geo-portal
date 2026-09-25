@@ -21,8 +21,9 @@ def query_overpass(
     """Run an Overpass query, return list of (lat, lon).
 
     Ways/relations are reduced to their center point. Retries on 429/5xx
-    with exponential backoff (5s, 10s, 20s, 40s).
+    with exponential backoff. Wait 12 seconds before every request to prevent IP bans.
     """
+    time.sleep(12)
     query = f"[out:json][timeout:{timeout}];\n({query_body}\n);\nout center;"
 
     for attempt in range(retries + 1):

@@ -1,13 +1,18 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import maplibregl from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
 import { Protocol } from "pmtiles";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 import { LAYERS, COMBINED_URL } from "@/lib/layers";
 import { BASEMAPS } from "@/lib/basemaps";
 import { FILL_OPACITY, gradientWithInput } from "@/lib/map-config";
+import { configureMaplibreWorker } from "@/lib/maplibre-worker";
+import { attachWhenStyleReady } from "@/lib/map-style-ready";
+import { ensurePmtilesProtocol } from "@/lib/pmtiles-protocol";
+import type { ScoreLoadStatus } from "@/lib/score-load-status";
+import { setVisibleTimeout } from "@/lib/visibility-timeout";
 
 const EQUAL_BLEND = (() => {
   const sum: unknown[] = ["+"];
@@ -25,32 +30,39 @@ function ringCentroid(ring: number[][]): [number, number] {
 interface Props {
   lat: number;
   lon: number;
+  nearby?: Record<string, { lat: number; lon: number; name: string }> | null;
   onScores: (scores: Record<string, number> | null) => void;
+  onStatus?: (status: ScoreLoadStatus) => void;
   /** Caption explaining what the coloured hexagons mean */
   legend: string;
   /** Receives a PNG snapshot of the map for the PDF */
   onImage?: (dataUrl: string) => void;
 }
 
-export default function ReportMap({ lat, lon, onScores, legend, onImage }: Props) {
+export default function ReportMap({ lat, lon, nearby, onScores, onStatus, legend, onImage }: Props) {
+  configureMaplibreWorker(maplibregl.setWorkerUrl);
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
+  const nearbyMarkers = useRef<maplibregl.Marker[]>([]);
   const onScoresRef = useRef(onScores);
+  const onStatusRef = useRef(onStatus);
   const onImageRef = useRef(onImage);
   useEffect(() => { onScoresRef.current = onScores; }, [onScores]);
+  useEffect(() => { onStatusRef.current = onStatus; }, [onStatus]);
   useEffect(() => { onImageRef.current = onImage; }, [onImage]);
 
   // Current target + per-lookup resolution state, kept in refs so the single
   // idle handler always sees the latest values and each address re-arms.
   const target = useRef({ lat, lon });
   const resolved = useRef(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelTimeout = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    const protocol = new Protocol();
-    maplibregl.addProtocol("pmtiles", protocol.tile);
-    return () => maplibregl.removeProtocol("pmtiles");
+    ensurePmtilesProtocol(maplibregl.addProtocol);
+    return () => {
+      // do not remove protocol, it is global
+    };
   }, []);
 
   // init once
@@ -63,26 +75,29 @@ export default function ReportMap({ lat, lon, onScores, legend, onImage }: Props
       center: [lon, lat],
       zoom: 14,
       maxZoom: 18,
-      attributionControl: false,
-      // allow canvas snapshot for the PDF (valid at runtime, missing from types)
+      // allow canvas snapshot for the PDF
       preserveDrawingBuffer: true,
     } as maplibregl.MapOptions);
     map.addControl(new maplibregl.NavigationControl(), "top-right");
     mapRef.current = map;
 
-    map.on("load", () => {
-      map.addSource("combined", { type: "vector", url: `pmtiles://${COMBINED_URL}` });
-      map.addLayer({
-        id: "combined-fill",
-        type: "fill",
-        source: "combined",
-        "source-layer": "cells",
-        paint: {
-          "fill-color": gradientWithInput("tmava", EQUAL_BLEND) as maplibregl.ExpressionSpecification,
-          "fill-opacity": FILL_OPACITY * 0.85,
-          "fill-antialias": false,
-        },
-      });
+    attachWhenStyleReady(map, () => {
+      if (!map.getSource("combined")) {
+        map.addSource("combined", { type: "vector", url: `pmtiles://${COMBINED_URL}` });
+      }
+      if (!map.getLayer("combined-fill")) {
+        map.addLayer({
+          id: "combined-fill",
+          type: "fill",
+          source: "combined",
+          "source-layer": "cells",
+          paint: {
+            "fill-color": gradientWithInput("tmava", EQUAL_BLEND) as maplibregl.ExpressionSpecification,
+            "fill-opacity": FILL_OPACITY * 0.85,
+            "fill-antialias": false,
+          },
+        });
+      }
     });
 
     markerRef.current = new maplibregl.Marker({ color: "#e8a030" })
@@ -92,8 +107,10 @@ export default function ReportMap({ lat, lon, onScores, legend, onImage }: Props
     const resolve = (s: Record<string, number> | null) => {
       if (resolved.current) return;
       resolved.current = true;
-      if (timer.current) clearTimeout(timer.current);
+      cancelTimeout.current?.();
+      cancelTimeout.current = null;
       onScoresRef.current(s);
+      onStatusRef.current?.(s ? "ready" : "outside");
       if (s && onImageRef.current) {
         // grab a snapshot once the render has settled
         map.once("idle", () => {
@@ -103,33 +120,42 @@ export default function ReportMap({ lat, lon, onScores, legend, onImage }: Props
       }
     };
 
+    const fail = () => {
+      if (resolved.current) return;
+      resolved.current = true;
+      cancelTimeout.current?.();
+      cancelTimeout.current = null;
+      onScoresRef.current(null);
+      onStatusRef.current?.("unavailable");
+    };
+
+    map.on("error", (event) => {
+      const sourceId = (event as unknown as { sourceId?: string }).sourceId;
+      const message = event.error?.message ?? "";
+      if (sourceId === "combined" || message.includes("combined.pmtiles")) fail();
+    });
+
     const readScores = () => {
       if (resolved.current) return;
       const { lat: tlat, lon: tlon } = target.current;
       const raw = map.querySourceFeatures("combined", { sourceLayer: "cells" });
       if (raw.length === 0) {
-        // No cells here. If the data source has finished loading, the address
-        // is genuinely outside coverage → answer now instead of waiting for
-        // the 15s timeout. Otherwise tiles are still loading — wait.
         if (map.isSourceLoaded("combined")) resolve(null);
         return;
       }
-      let best: (typeof raw)[number] | null = null;
+      // the PMTiles layer geometry is EPSG:4326
+      let bestFeature = raw[0];
       let bestDist = Infinity;
-      const cosLat = Math.cos(tlat * Math.PI / 180);
       for (const f of raw) {
-        if (f.geometry?.type !== "Polygon") continue;
-        const [flng, flat] = ringCentroid((f.geometry as GeoJSON.Polygon).coordinates[0]);
-        const d = Math.hypot((flng - tlon) * cosLat, flat - tlat);
-        if (d < bestDist) { bestDist = d; best = f; }
+        if (f.geometry.type === "Polygon") {
+          const c = ringCentroid(f.geometry.coordinates[0]);
+          const d = Math.hypot(c[0] - tlon, c[1] - tlat);
+          if (d < bestDist) { bestDist = d; bestFeature = f; }
+        }
       }
-      if (!best || bestDist > 0.004) { resolve(null); return; } // outside coverage
-      const props = best.properties ?? {};
-      // Pass every numeric property: layer scores (keyed by id) and concrete
-      // metrics (keyed "n_<id>" — object counts or dB).
       const out: Record<string, number> = {};
-      for (const [k, v] of Object.entries(props)) {
-        const n = Number(v);
+      for (const k in bestFeature.properties) {
+        const n = Number(bestFeature.properties[k]);
         if (!Number.isNaN(n)) out[k] = n;
       }
       for (const l of LAYERS) if (!(l.id in out)) out[l.id] = 0;
@@ -139,7 +165,8 @@ export default function ReportMap({ lat, lon, onScores, legend, onImage }: Props
     map.on("idle", readScores);
 
     return () => {
-      if (timer.current) clearTimeout(timer.current);
+      cancelTimeout.current?.();
+      cancelTimeout.current = null;
       map.remove();
       mapRef.current = null;
     };
@@ -150,10 +177,14 @@ export default function ReportMap({ lat, lon, onScores, legend, onImage }: Props
   useEffect(() => {
     target.current = { lat, lon };
     resolved.current = false;
-    if (timer.current) clearTimeout(timer.current);
-    // safety net so the UI never hangs if tiles stall
-    timer.current = setTimeout(() => {
-      if (!resolved.current) { resolved.current = true; onScoresRef.current(null); }
+    onStatusRef.current?.("loading");
+    cancelTimeout.current?.();
+    cancelTimeout.current = setVisibleTimeout(() => {
+      if (!resolved.current) {
+        resolved.current = true;
+        onScoresRef.current(null);
+        onStatusRef.current?.("unavailable");
+      }
     }, 15000);
 
     const map = mapRef.current;

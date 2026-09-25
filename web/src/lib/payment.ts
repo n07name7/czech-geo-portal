@@ -1,5 +1,5 @@
 // Payment config. Lives in "mock mode" until real Stripe keys are set as
-// env vars — then the same flow switches to live Checkout with no code
+// env vars - then the same flow switches to live Checkout with no code
 // changes. Mock mode lets the whole purchase → PDF flow be tested without
 // money or accounts.
 
@@ -18,14 +18,10 @@ export const PAYMENTS_LIVE = stripeSecret.startsWith("sk_");
 // those pieces are implemented and independently tested.
 export const PAYMENTS_VISIBLE = false;
 
-/** A session id we accept as paid. In mock mode any "mock_…" passes. */
-export function isPaidSession(session: string | null): boolean {
-  if (!session) return false;
-  if (!PAYMENTS_LIVE) return session.startsWith("mock_");
-  // live verification happens server-side via the Stripe API (checkout route)
-  return session.startsWith("cs_");
-}
-
-export function mockSessionId(): string {
-  return `mock_${Date.now().toString(36)}`;
+export function canVerifyLiveSession(
+  session: string | null,
+  paymentsVisible = PAYMENTS_VISIBLE,
+  paymentsLive = PAYMENTS_LIVE
+): boolean {
+  return paymentsVisible && paymentsLive && !!session?.startsWith("cs_");
 }

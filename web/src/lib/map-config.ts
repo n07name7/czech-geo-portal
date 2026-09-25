@@ -28,8 +28,8 @@ export const SCORE_GRADIENT_LIGHT = [
   1.0,  "#801a00",
 ];
 
-// Three vivid, clearly distinct anchors — red (worst) → violet (mid) → cyan
-// (best) — with smooth interpolation between them. These hues are absent from
+// Three vivid, clearly distinct anchors - red (worst) → violet (mid) → cyan
+// (best) - with smooth interpolation between them. These hues are absent from
 // satellite imagery, so each band stays legible; red still reads as "bad".
 export const SCORE_GRADIENT_SATELLITE = [
   "interpolate", ["linear"], ["get", "score"],

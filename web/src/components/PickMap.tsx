@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import maplibregl from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 import { BASEMAPS } from "@/lib/basemaps";
+import { configureMaplibreWorker } from "@/lib/maplibre-worker";
 
 interface Props {
   lat?: number;
@@ -16,6 +17,7 @@ interface Props {
 /** Interactive map for choosing a point by clicking (alternative to typing an
  *  address). Reuses the site's dark basemap; emits the clicked coordinates. */
 export default function PickMap({ lat, lon, onPick }: Props) {
+  configureMaplibreWorker(maplibregl.setWorkerUrl);
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
@@ -30,7 +32,6 @@ export default function PickMap({ lat, lon, onPick }: Props) {
       style,
       center: [lon ?? 15.33, lat ?? 49.82], // whole-CZ view when nothing chosen yet
       zoom: lat != null ? 14 : 7,
-      attributionControl: false,
     });
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     mapRef.current = map;

@@ -1,4 +1,14 @@
 {
+  "error": {
+    "title": "Něco se nepodařilo",
+    "description": "Stránku se nepodařilo dokončit. Vaše údaje jsme neodeslali; zkuste akci znovu.",
+    "retry": "Zkusit znovu",
+    "home": "Na úvodní stránku"
+  },
+  "citySearch": {
+    "placeholder": "Hledat město…",
+    "noResults": "Nic nenalezeno"
+  },
   "ui": {
     "city": "Město",
     "layers": "Vrstvy",
@@ -34,11 +44,16 @@
     "map": "Mapa",
     "compare": "Porovnat",
     "methodology": "Metodologie",
-    "report": "Report"
+    "languageTo": "Přepnout jazyk na {language}",
+    "report": "Report",
+    "openMenu": "Otevřít menu",
+    "closeMenu": "Zavřít menu"
   },
   "landing": {
     "headline": "Kam v Česku?",
-    "subheadline": "Porovnejte čtvrti podle škol, klidu, bezpečnosti, dopravy a dalších — a najděte tu pravou pro sebe.",
+    "headlineAccent": "v Česku?",
+    "brandShort": "KvČ",
+    "subheadline": "Porovnejte čtvrti podle škol, klidu, bezpečnosti, dopravy a dalších - a najděte tu pravou pro sebe.",
     "cta": "Otevřít mapu",
     "ctaCompare": "Porovnat dvě adresy",
     "layersTitle": "Co portál zobrazuje",
@@ -57,18 +72,22 @@
     "searchPlaceholder": "Zadejte ulici nebo adresu…",
     "searchCta": "Prověřit adresu",
     "searching": "Hledám…",
+    "searchUnavailable": "Vyhledávání adres je dočasně nedostupné. Zkuste to znovu.",
     "searchNote": "Základní přehled zdarma · bez registrace",
     "reportShowcaseTitle": "Co dostanete v reportu",
-    "reportShowcaseLead": "Zadejte adresu nebo klikněte na mapu a stáhněte si detailní PDF o okolí:"
+    "reportShowcaseLead": "Zadejte adresu nebo klikněte na mapu a stáhněte si detailní PDF o okolí:",
+    "sectionData": "Data",
+    "sectionSteps": "Postup",
+    "sectionReport": "Report"
   },
   "methodology": {
     "title": "Metodologie",
     "aboutTitle": "O projektu",
-    "aboutText": "Pomáháme vybrat správné místo k životu. Pro každou čtvrť ukazujeme dostupnost a kvalitu okolní infrastruktury pomocí hexagonální sítě H3 — od škol a obchodů přes dopravu až po klid a bezpečnost. Určeno Čechům i expatům, kteří hledají ideální čtvrť. Pokrytí měst postupně rozšiřujeme.",
+    "aboutText": "Pomáháme vybrat správné místo k životu. Pro každou čtvrť ukazujeme dostupnost a kvalitu okolní infrastruktury pomocí hexagonální sítě H3 - od škol a obchodů přes dopravu až po klid a bezpečnost. Určeno Čechům i expatům, kteří hledají ideální čtvrť. Pokrytí měst postupně rozšiřujeme.",
     "sourcesTitle": "Zdroje dat",
     "scoringTitle": "Jak se počítá skóre",
-    "scoringText": "Město dělíme na hexagonální buňky H3 (~150×150 m). U většiny vrstev počítáme počet objektů v okruhu 800 m od středu buňky (≈10 minut chůze). Klid odvozujeme ze strategických hlukových map (méně hluku = vyšší skóre) a bezpečnost z hustoty kriminality (méně případů = vyšší skóre). Výsledek normalizujeme na škálu 0–1 v rámci daného města — skóre 1 znamená nejlepší hodnotu ve městě, 0 nejhorší.",
-    "matchTitle": "Podle mě — vlastní váhy",
+    "scoringText": "Město dělíme na hexagonální buňky H3 (~150×150 m). U většiny vrstev počítáme počet objektů v okruhu 800 m od středu buňky (≈10 minut chůze). Klid odvozujeme ze strategických hlukových map (méně hluku = vyšší skóre) a bezpečnost z hustoty kriminality (méně případů = vyšší skóre). Výsledek normalizujeme na škálu 0-1 v rámci daného města - skóre 1 znamená nejlepší hodnotu ve městě, 0 nejhorší.",
+    "matchTitle": "Podle mě - vlastní váhy",
     "matchText": "V režimu „Podle mě\" si u každého kritéria nastavíte důležitost. Mapa spočítá vážený průměr skóre všech vrstev a okamžitě obarví čtvrti podle toho, jak sedí právě vašim prioritám. Posouvejte posuvníky a sledujte, jak se nejlepší čtvrti mění v reálném čase."
   },
   "basemap": {
@@ -83,14 +102,39 @@
     "addressA": "Adresa A",
     "addressB": "Adresa B",
     "placeholder": "Zadejte ulici nebo adresu…",
+    "searchUnavailable": "Vyhledávání adres je dočasně nedostupné. Zkuste to znovu.",
+    "scoreLoading": "Načítáme hodnocení obou adres…",
+    "scoreOutside": "Pro jednu z adres zatím nemáme datové pokrytí.",
+    "scoreUnavailable": "Data pro hodnocení jsou dočasně nedostupná. Adresy byly vybrány správně; problém je na straně datového zdroje.",
+    "retryScores": "Zkusit načíst hodnocení znovu",
     "change": "Změnit adresu",
     "openReport": "Otevřít detailní report",
-    "recommendation": "Doporučení"
+    "recommendation": "Doporučení",
+    "detailsTitle": "Rozdíly, které ovlivní rozhodnutí",
+    "detailsLead": "Skóre jsou relativní v rámci daného města. Vyšší je lepší; u nájemného je výhodnější nižší hodnota.",
+    "betterA": "Výhoda A",
+    "betterB": "Výhoda B",
+    "close": "Bez podstatného rozdílu",
+    "withinCity": "Percentil v rámci vlastního města",
+    "rentDiff": "Rozdíl {value} Kč/m²/měs",
+    "scoreDiff": "Rozdíl {value} bodů",
+    "criterion": {
+      "rent": "Nájemné",
+      "transport": "MHD",
+      "safety": "Bezpečnostní signál",
+      "quiet": "Klid",
+      "schools": "Základní školy",
+      "shops": "Obchody",
+      "air": "Kvalita ovzduší"
+    }
   },
   "report": {
+    "copyLink": "Kopírovat odkaz",
+    "copied": "Zkopírováno!",
     "title": "Report podle adresy",
-    "subtitle": "Zadejte adresu a získejte přehled kvality okolí — školy, klid, bezpečnost, doprava a další.",
+    "subtitle": "Zadejte adresu a získejte přehled kvality okolí - školy, klid, bezpečnost, doprava a další.",
     "placeholder": "Zadejte adresu (ulice, město)…",
+    "searchUnavailable": "Vyhledávání adres je dočasně nedostupné. Zkuste to znovu.",
     "hint": "Začněte zadáním adresy výše.",
     "loading": "Načítání dat o lokalitě…",
     "noData": "Pro tuto adresu zatím nemáme data (mimo pokrytá města).",
@@ -98,7 +142,8 @@
     "pdfTitle": "Celý report",
     "pdfDesc": "Kompletní PDF report navíc obsahuje:",
     "pdfDownload": "Stáhnout PDF",
-    "pdfWait": "Přesměrování…",
+    "pdfWait": "Připravuji PDF…",
+    "pdfError": "PDF se nepodařilo připravit. Zkuste to prosím znovu.",
     "pdfBuy": "Koupit PDF za {price} Kč",
     "proHint": "Často hledáte? Vyzkoušejte",
     "proLink": "předplatné Pro",
@@ -109,19 +154,19 @@
     "radiusNote": "Počty v okruhu 800 m od adresy (≈10 min chůze); bezpečnost za posledních 12 měsíců. Kvalita SŠ: nejlepší střední škola do 3 km podle percentilu přijímaček (CERMAT).",
     "mapLegend": "Barva okolí = celkové hodnocení lokality (světlejší = lepší)",
     "percentile": ". percentil",
-    "premiumTitle": "Prémiové — v plném reportu",
+    "premiumTitle": "Prémiové - v plném reportu",
     "unlock": "Odemknout celý report za {price} Kč",
     "pdfFree": "Stáhnout PDF (zdarma, náhled)",
-    "premiumFree": "Prémiové — nyní zdarma (beta)",
+    "premiumFree": "Prémiové - nyní zdarma (beta)",
     "nearbyTitle": "Co máte v okolí",
-    "nearbyDesc": "Nejbližší konkrétní místa od adresy (chůze).",
-    "nearWalk": "min pěšky",
+    "nearbyDesc": "Nejbližší konkrétní místa od adresy; čas je orientační odhad podle vzdálenosti vzdušnou čarou.",
+    "nearWalk": "min · odhad vzdušnou čarou",
     "nearNone": "v dosahu nenalezeno",
     "nearCat": {
       "supermarket": "Supermarket",
       "pharmacy": "Lékárna",
       "health": "Lékař / nemocnice",
-      "school": "Základní škola",
+      "school": "Škola",
       "transit": "MHD zastávka",
       "park": "Park"
     },
@@ -136,28 +181,51 @@
     "isoWalk": "10 minut pěšky",
     "isoDrive": "10 minut autem",
     "pdfPreparing": "Připravuji data…",
-    "pickOpen": "📍 Nebo vyberte místo na mapě",
+    "pickOpen": "Nebo vyberte místo na mapě",
     "pickHide": "Skrýt mapu",
     "pickHint": "Klikněte do mapy pro výběr místa (i bez adresy).",
     "scoreCtx": "relativně v rámci města",
     "profileTitle": "Vyberte, pro koho hledáte",
     "profileLead": "Skóre i doporučení přizpůsobíme tomu, co je pro vás důležité.",
     "profile": {
-      "balanced": { "label": "Vyváženě", "desc": "obecný pohled na lokalitu" },
-      "family": { "label": "Pro rodinu", "desc": "školy, školky, klid a bezpečnost" },
-      "renter": { "label": "Pro nájem", "desc": "MHD, služby a cena okolí" },
-      "student": { "label": "Pro studenta", "desc": "dostupnost, služby a volný čas" }
+      "balanced": {
+        "label": "Vyváženě",
+        "desc": "obecný pohled na lokalitu"
+      },
+      "family": {
+        "label": "Pro rodinu",
+        "desc": "školy, školky, klid a bezpečnost"
+      },
+      "renter": {
+        "label": "Pro nájem",
+        "desc": "MHD, služby a každodenní dostupnost"
+      },
+      "student": {
+        "label": "Pro studenta",
+        "desc": "dostupnost, služby a volný čas"
+      }
     },
     "decisionTitle": "Shrnutí pro rozhodnutí",
     "strengths": "Silné stránky",
     "watchOuts": "Na co pozor",
     "feat": {
       "rent": "Nájemné v okolí (Kč/m²) + srovnání s městem",
-      "nearby": "Co máte v okolí — obchody, MHD, škola… s docházkou",
-      "reach": "Mapy dostupnosti — kam dojdete za 10 min pěšky i autem",
-      "flags": "Na co si dát pozor — rušná silnice, herna, železnice…",
+      "nearby": "Co máte v okolí - obchody, MHD, škola… s odhadem vzdušnou čarou",
+      "reach": "Mapy dostupnosti - kam dojdete za 10 min pěšky i autem",
+      "flags": "Na co si dát pozor - rušná silnice, herna, železnice…",
       "env": "Povodňové riziko + hluk ve dne i v noci",
       "city": "Srovnání všech kategorií s průměrem města"
-    }
+    },
+    "dataPartial": "Část volitelných online dat je dočasně nedostupná. PDF lze stáhnout, ale příslušné sekce budou vynechány; chybějící odpověď neznamená nepřítomnost rizika.",
+    "retryPdf": "Zkusit načíst data znovu",
+    "scoreUnavailable": "Data pro hodnocení jsou dočasně nedostupná. Adresa byla vybrána správně; problém je na straně datového zdroje.",
+    "scoreOutside": "Pro tuto adresu zatím nemáme datové pokrytí.",
+    "retryScores": "Zkusit načíst hodnocení znovu"
+  },
+  "footer": {
+    "beta": "Beta · hodnocení okolí, nikoli kontrola nemovitosti",
+    "linksLabel": "Informace o službě",
+    "methodology": "Metodologie a zdroje",
+    "privacy": "Data a soukromí"
   }
 }

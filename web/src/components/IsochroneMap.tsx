@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import maplibregl from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 import { BASEMAPS } from "@/lib/basemaps";
+import { configureMaplibreWorker } from "@/lib/maplibre-worker";
 
 interface Props {
   lat: number;
@@ -18,8 +19,10 @@ interface Props {
 }
 
 /** A small static map showing where you can get from the address in 10 minutes
- *  (street-network isochrone from /api/isochrone) over the dark basemap. */
+ *  (street-network isochrone from /api/isochrone) over the light Positron basemap.
+ *  Renders at 2× pixel ratio for crisp PDF export. */
 export default function IsochroneMap({ lat, lon, mode, color, onImage, onMeta }: Props) {
+  configureMaplibreWorker(maplibregl.setWorkerUrl);
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const onImageRef = useRef(onImage);
@@ -29,15 +32,15 @@ export default function IsochroneMap({ lat, lon, mode, color, onImage, onMeta }:
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
-    const dark = BASEMAPS.find((b) => b.id === "tmava")?.style as string;
+    const light = BASEMAPS.find((b) => b.id === "svetla")?.style as string;
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: dark,
+      style: light,
       center: [lon, lat],
       zoom: mode === "walk" ? 13 : 11,
-      attributionControl: false,
       interactive: false,
       preserveDrawingBuffer: true,
+      pixelRatio: 2,
     } as maplibregl.MapOptions);
     mapRef.current = map;
     let captured = false;

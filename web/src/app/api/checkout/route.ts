@@ -5,27 +5,36 @@ import {
   REPORT_PRICE_CZK,
   SUBSCRIPTION_PRICE_CZK,
   stripeSecret,
-} from "@/lib/payment";
+} from "../../../lib/payment";
+import { BodyTooLargeError, readLimitedJson } from "../_lib/request-protection";
 
-// Creates a Checkout Session and returns { url } to redirect to.
-// Mock mode (no Stripe keys): returns a local URL that marks the report
-// as paid so the full flow is testable end-to-end.
+// Creates a Checkout Session only after the durable-entitlement rollout enables payments.
 export async function POST(req: NextRequest) {
-  const { mode, address, locale } = await req.json().catch(() => ({}));
-  const kind = mode === "subscription" ? "subscription" : "payment";
-
-  // Checkout is deliberately closed during beta. This prevents a configuration
-  // mistake from presenting a paid flow without durable purchase entitlement.
+  // Fail closed before touching an attacker-controlled request body.
   if (!PAYMENTS_VISIBLE || !PAYMENTS_LIVE) {
     return NextResponse.json({ error: "payments_unavailable" }, { status: 503 });
   }
+
+  let body: Record<string, unknown>;
+  try {
+    body = await readLimitedJson(req, 8_192) as Record<string, unknown>;
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof BodyTooLargeError ? "payload_too_large" : "bad_body" },
+      { status: error instanceof BodyTooLargeError ? 413 : 400 },
+    );
+  }
+  const { mode, locale } = body;
+  if (mode !== "payment" && mode !== "subscription")
+    return NextResponse.json({ error: "invalid_mode" }, { status: 400 });
+  const kind = mode === "subscription" ? "subscription" : "payment";
+
   const origin = req.nextUrl.origin;
-  const loc = typeof locale === "string" ? locale : "cs";
+  const loc = locale === "en" || locale === "ru" ? locale : "cs";
 
   // ── Live Stripe Checkout ──────────────────────────────────────────────
   const amount = (kind === "subscription" ? SUBSCRIPTION_PRICE_CZK : REPORT_PRICE_CZK) * 100;
   const successParams = new URLSearchParams({ paid: "{CHECKOUT_SESSION_ID}" });
-  if (address) successParams.set("address", String(address));
 
   const form = new URLSearchParams({
     mode: kind,
